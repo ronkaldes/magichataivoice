@@ -77,7 +77,17 @@ sed -i '' \
 echo "📤 Pushing to open source repo..."
 cd "$OPENSOURCE_REPO"
 git add .
-git commit -m "Sync from internal repo - $(date)" || echo "No changes to commit"
+
+# Get recent commits from internal repo to include in sync commit
+cd "$INTERNAL_REPO"
+RECENT_COMMITS=$(git log --oneline -5 --pretty=format:"- %s (%h)")
+cd "$OPENSOURCE_REPO"
+
+# Create commit with actual commit info
+git commit -m "Sync from internal repo - $(date)
+
+Recent commits synced:
+$RECENT_COMMITS" || echo "No changes to commit"
 git push origin main
 
 # Clean up temp directory
