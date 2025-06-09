@@ -92,7 +92,7 @@ app.use(apiLogger);
 
 // Add this before the regular express.json middleware
 // Special handling for Stripe webhooks to preserve raw body for signature verification
-// // // // app.use('/billing/webhooks/stripe', express.raw({ type: 'application/json' }));
+// // app.use('/billing/webhooks/stripe', express.raw({ type: 'application/json' }));
 
 // Middleware
 app.use(express.json({limit: '50mb'}));
@@ -146,21 +146,21 @@ const activityRouter = require("./routes/activityRouter");
 const workflowRouter = require("./routes/workflowRouter");
 const interactiveRouter = require("./routes/interactiveRouter");
 const knowledgebaseRouter = require("./routes/knowledgebaseRouter");
-// // const phoneNumbersAdminRouter = require("./routes/phoneNumbersAdminRouter");
+// const phoneNumbersAdminRouter = require("./routes/phoneNumbersAdminRouter");
 const phoneNumbersRouter = require("./routes/phoneNumbersRouter");
 const getVoicesRouter = require("./routes/getVoicesRouter");
-// // const getVoicesAdminRouter = require("./routes/getVoicesAdminRouter");
+// const getVoicesAdminRouter = require("./routes/getVoicesAdminRouter");
 const twilioRouter = require("./routes/twilioRouter");
 const workspaceRouter = require("./routes/workspace");
 const usageRouter = require("./routes/usageRouter");
-// // const getUsersAdminRouter = require("./routes/getUsersAdminRouter");
-// // const getWorkspacesAdminRouter = require("./routes/getWorkspacesAdminRouter");
-// // const getAgentsAdminRouter = require("./routes/getAgentsAdminRouter");
-// // const getActivitiesAdminRouter = require("./routes/getActivitiesAdminRouter");
-// // const getToolsAdminRouter = require("./routes/getToolsAdminRouter");
+// const getUsersAdminRouter = require("./routes/getUsersAdminRouter");
+// const getWorkspacesAdminRouter = require("./routes/getWorkspacesAdminRouter");
+// const getAgentsAdminRouter = require("./routes/getAgentsAdminRouter");
+// const getActivitiesAdminRouter = require("./routes/getActivitiesAdminRouter");
+// const getToolsAdminRouter = require("./routes/getToolsAdminRouter");
 const toolsRouter = require("./routes/toolsRouter");
-// // const siteDataAdminRouter = require('./routes/siteDataAdminRouter');
-// // const billingRouter = require('./routes/billing');
+// const siteDataAdminRouter = require('./routes/siteDataAdminRouter');
+// const billingRouter = require('./routes/billing');
 const testRouter = require('./routes/testRouter');
 
 // Token generation for Twilio Client
@@ -201,23 +201,23 @@ app.use("/activities", activityRouter);
 app.use("/workflow", workflowRouter);
 app.use("/knowledge-source", knowledgebaseRouter);
 app.use("/workspace", workspaceRouter);
-// // app.use("/admin/users", getUsersAdminRouter);
-// // app.use("/admin/workspaces", getWorkspacesAdminRouter);
-// // app.use("/admin/agents", getAgentsAdminRouter);
-// // app.use("/admin/activities", getActivitiesAdminRouter);
-// // app.use('/admin/site-data', siteDataAdminRouter);
-// // app.use('/billing', billingRouter);
+// app.use("/admin/users", getUsersAdminRouter);
+// app.use("/admin/workspaces", getWorkspacesAdminRouter);
+// app.use("/admin/agents", getAgentsAdminRouter);
+// app.use("/admin/activities", getActivitiesAdminRouter);
+// app.use('/admin/site-data', siteDataAdminRouter);
+// app.use('/billing', billingRouter);
 app.use('/api/test', testRouter);
 
 //For the interactive agents
 app.use("/interactive", interactiveRouter);
 app.use("/phone-number", phoneNumbersRouter);
-// // app.use("/admin-phone-number",phoneNumbersAdminRouter);
+// app.use("/admin-phone-number",phoneNumbersAdminRouter);
 app.use("/get-voices",getVoicesRouter);
-// // app.use("/get-admin-voices",getVoicesAdminRouter);
+// app.use("/get-admin-voices",getVoicesAdminRouter);
 app.use("/twilio",twilioRouter);
 app.use('/usage',usageRouter);
-// // app.use("/get-admin-tools", getToolsAdminRouter);
+// app.use("/get-admin-tools", getToolsAdminRouter);
 app.use("/get-tools", toolsRouter);
 
 

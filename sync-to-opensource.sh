@@ -8,6 +8,9 @@ OPENSOURCE_REMOTE_URL="https://github.com/Intervo/Intervo.git"  # Add your open 
 # Files/folders to exclude from sync
 EXCLUDE_PATTERNS=(
     "packages/intervo-backend/.env*"
+    "packages/intervo-frontend/.env"
+    "packages/intervo-frontend/.env.local"
+    "packages/intervo-widget/.env*"
     "packages/intervo-backend/src/billing/"
     "packages/intervo-backend/routes/*admin*.js"
     "packages/intervo-backend/routes/*Admin*.js"
@@ -21,7 +24,6 @@ EXCLUDE_PATTERNS=(
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/settings/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/agent/(agent)/[slug]/playground/canvas/"
     "**/node_modules"
-    "**/.env*"
     "**/dist"
     "**/build"
     "**/.DS_Store"
@@ -44,26 +46,39 @@ for pattern in "${EXCLUDE_PATTERNS[@]}"; do
     echo "$pattern" >> "$EXCLUDE_FILE"
 done
 
-# Sync files
+# Clone the existing open source repo to preserve history
+echo "📥 Cloning existing open source repo..."
+if [ -d "$OPENSOURCE_REPO" ]; then
+    rm -rf "$OPENSOURCE_REPO"
+fi
+git clone "$OPENSOURCE_REMOTE_URL" "$OPENSOURCE_REPO"
+
+# Now sync the files to the cloned repo
+echo "🔄 Syncing files to cloned repo..."
 rsync -av --delete --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
-
-# Replace docker-compose with simplified version
-cp opensource-docker-compose.yml "$OPENSOURCE_REPO/docker-compose.yml"
-
-# Note: If you get compilation errors, manually fix the broken imports
 
 # Clean up exclude file
 rm "$EXCLUDE_FILE"
 
+# Replace docker-compose with simplified version
+cp opensource-docker-compose.yml "$OPENSOURCE_REPO/docker-compose.yml"
+
+# Remove admin and billing imports from server.js
+echo "🔧 Removing admin and billing imports from server.js..."
+sed -i '' \
+    -e '/const.*AdminRouter = require/s/^/\/\/ /' \
+    -e '/const billingRouter = require/s/^/\/\/ /' \
+    -e '/app\.use.*[Aa]dmin/s/^/\/\/ /' \
+    -e '/app\.use.*billing/s/^/\/\/ /' \
+    -e '/app\.use.*\/billing\//s/^/\/\/ /' \
+    "$OPENSOURCE_REPO/packages/intervo-backend/server.js"
+
 # Push to open source repo
 echo "📤 Pushing to open source repo..."
 cd "$OPENSOURCE_REPO"
-git init
 git add .
-git commit -m "Sync from internal repo - $(date)"
-git branch -M main
-git remote add origin "$OPENSOURCE_REMOTE_URL"
-git push origin main --force
+git commit -m "Sync from internal repo - $(date)" || echo "No changes to commit"
+git push origin main
 
 # Clean up temp directory
 cd "$INTERNAL_REPO"

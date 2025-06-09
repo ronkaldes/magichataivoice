@@ -4,6 +4,7 @@ public
 .env.development
 .env.production
 .env.staging   
+.env.local
 config/intervo-google-key.json
 venv
 example_vector_store

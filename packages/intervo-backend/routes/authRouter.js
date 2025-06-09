@@ -95,18 +95,18 @@ router.get(
 
       // Clear any existing cookies first
       res.clearCookie('authToken', {
-        domain: '.development-api.intervo.ai',
+        domain: process.env.DEV_COOKIE_DOMAIN,
         path: '/'
       });
       res.clearCookie('authToken', {
-        domain: 'intervo.ai',
+        domain: process.env.COOKIE_DOMAIN,
         path: '/',
         httpOnly: true,
         secure: true,
         sameSite: 'None'
       });
       res.clearCookie('refreshToken', {
-        domain: 'intervo.ai',
+        domain: process.env.COOKIE_DOMAIN,
         path: '/',
         httpOnly: true,
         secure: true,
@@ -120,7 +120,7 @@ router.get(
         sameSite: "None",
         maxAge: 360000000, // 100 hours
         path: "/",
-        domain: 'intervo.ai'
+        domain: process.env.COOKIE_DOMAIN
       });
 
       res.cookie('refreshToken', refreshToken, {
@@ -129,11 +129,11 @@ router.get(
         sameSite: "None",
         maxAge: 7 * 24 * 3600000, // 7 days
         path: "/",
-        domain: 'intervo.ai'
+        domain: process.env.COOKIE_DOMAIN
       });
 
       // Redirect to frontend
-      const redirectUrl = process.env.FRONTEND_URL || 'http://localhost:3000';
+      const redirectUrl = process.env.FRONTEND_URL;
       res.redirect(redirectUrl);
     } catch (error) {
       console.error('Error during Google callback:', error);
@@ -164,18 +164,18 @@ router.get('/status', (req, res) => {
   } catch (error) {
     // Clear cookies if token is invalid
     res.clearCookie('authToken', {
-      domain: '.development-api.intervo.ai',
+      domain: process.env.DEV_COOKIE_DOMAIN,
       path: '/'
     });
     res.clearCookie('authToken', {
-      domain: 'intervo.ai',
+      domain: process.env.COOKIE_DOMAIN,
       path: '/',
       httpOnly: true,
       secure: true,
       sameSite: 'None'
     });
     res.clearCookie('refreshToken', {
-      domain: 'intervo.ai',
+      domain: process.env.COOKIE_DOMAIN,
       path: '/',
       httpOnly: true,
       secure: true,
@@ -192,7 +192,7 @@ router.post('/logout', async (req, res) => {
   
   // Options for clearing cookies set for intervo.ai domain
   const intervoCookieClearOptions = {
-    domain: 'intervo.ai', // Consistent with how it's set
+    domain: process.env.COOKIE_DOMAIN, // Consistent with how it's set
     path: '/',
     httpOnly: true,
     secure: true,
@@ -201,7 +201,7 @@ router.post('/logout', async (req, res) => {
 
   // Clear cookies first
   res.clearCookie('authToken', {
-    domain: '.development-api.intervo.ai', // Keep as is for this domain
+    domain: process.env.DEV_COOKIE_DOMAIN, // Keep as is for this domain
     path: '/'
   });
   res.clearCookie('authToken', intervoCookieClearOptions);
@@ -225,14 +225,14 @@ router.post('/refresh-token', async (req, res) => {
     if (!user) {
       // Define cookie clearing options (consistent with /logout)
       const intervoCookieClearOptions = {
-        domain: 'intervo.ai',
+        domain: process.env.COOKIE_DOMAIN,
         path: '/',
         httpOnly: true,
         secure: true,
         sameSite: 'None'
       };
       // Clear auth cookies
-      res.clearCookie('authToken', { domain: '.development-api.intervo.ai', path: '/' });
+      res.clearCookie('authToken', { domain: process.env.DEV_COOKIE_DOMAIN, path: '/' });
       res.clearCookie('authToken', intervoCookieClearOptions);
       res.clearCookie('refreshToken', intervoCookieClearOptions);
       
@@ -257,21 +257,21 @@ router.post('/refresh-token', async (req, res) => {
       sameSite: "None",
       maxAge: 360000000,//100 hours
       path: "/",
-      domain: 'intervo.ai'
+      domain: process.env.COOKIE_DOMAIN
     });
 
     res.json({ success: true });
   } catch (error) {
     // Define cookie clearing options (consistent with /logout)
     const intervoCookieClearOptions = {
-      domain: 'intervo.ai',
+      domain: process.env.COOKIE_DOMAIN,
       path: '/',
       httpOnly: true,
       secure: true,
       sameSite: 'None'
     };
     // Clear auth cookies
-    res.clearCookie('authToken', { domain: '.development-api.intervo.ai', path: '/' });
+    res.clearCookie('authToken', { domain: process.env.DEV_COOKIE_DOMAIN, path: '/' });
     res.clearCookie('authToken', intervoCookieClearOptions);
     res.clearCookie('refreshToken', intervoCookieClearOptions);
 
@@ -384,7 +384,7 @@ router.post('/send-magic-link', magicLinkLimiter, async (req, res) => {
     );
     
     // Construct the magic link URL
-    const frontendUrl = process.env.FRONTEND_URL || 'https://app.intervo.ai';
+    const frontendUrl = process.env.FRONTEND_URL;
     const magicLink = `${frontendUrl}/verify?token=${magicLinkToken}`;
     
     // Create a hash of the token to store (never store the actual token)
@@ -527,7 +527,7 @@ router.post('/verify-magic-link', async (req, res) => {
       sameSite: "None",
       maxAge: 360000000, // 100 hours
       path: "/",
-      domain: 'intervo.ai'
+      domain: process.env.COOKIE_DOMAIN
     });
     
     res.cookie('refreshToken', refreshToken, {
@@ -536,7 +536,7 @@ router.post('/verify-magic-link', async (req, res) => {
       sameSite: "None",
       maxAge: 7 * 24 * 3600000, // 7 days
       path: "/",
-      domain: 'intervo.ai'
+      domain: process.env.COOKIE_DOMAIN
     });
     
     // Return user data

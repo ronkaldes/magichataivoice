@@ -1,6 +1,6 @@
 const API_CONFIG = {
-  production: "https://api.intervo.ai", // Production API URL
-  development: "https://development-api.intervo.ai", // Development API URL
+  production: process.env.NEXT_PUBLIC_API_URL_PRODUCTION, // Production API URL from env
+  development: process.env.NEXT_PUBLIC_API_URL_DEVELOPMENT, // Development API URL from env
 };
 
 const returnAPIUrl = () => {
