@@ -7,10 +7,8 @@ OPENSOURCE_REMOTE_URL="https://github.com/Intervo/Intervo.git"  # Add your open 
 
 # Files/folders to exclude from sync
 EXCLUDE_PATTERNS=(
-    "packages/intervo-backend/.env*"
     "packages/intervo-frontend/.env"
     "packages/intervo-frontend/.env.local"
-    "packages/intervo-widget/.env*"
     "packages/intervo-backend/src/billing/"
     "packages/intervo-backend/routes/*admin*.js"
     "packages/intervo-backend/routes/*Admin*.js"
