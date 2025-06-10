@@ -51,9 +51,9 @@ if [ -d "$OPENSOURCE_REPO" ]; then
 fi
 git clone "$OPENSOURCE_REMOTE_URL" "$OPENSOURCE_REPO"
 
-# Now sync the files to the cloned repo
+# Now sync the files to the cloned repo (without --delete to preserve open source changes)
 echo "🔄 Syncing files to cloned repo..."
-rsync -av --delete --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
+rsync -av --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
 
 # Clean up exclude file
 rm "$EXCLUDE_FILE"

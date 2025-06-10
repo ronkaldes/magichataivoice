@@ -12,7 +12,7 @@ import { useSource } from "@/context/SourceContext";
 
 const backendAPIUrl = returnAPIUrl();
 //const backendAPIUrl = "http://localhost:3003";
-const WEBSOCKET_URL = returnAPIUrl().replace(/^https?:\/\//, "");
+const WEBSOCKET_URL = returnAPIUrl()?.replace(/^https?:\/\//, "") || "";
 
 const defaultAIConfig = {
   sttService: "whisper",
