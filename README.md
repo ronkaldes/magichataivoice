@@ -1,10 +1,15 @@
 <p align="center">
-  <a href="https://intervo.ai" target="_blank">
-    <img src="https://placehold.co/800x400/e2e8f0/4a5568?text=Intervo.ai+Logo" alt="Intervo.ai Banner" width="500"/>
-  </a>
+<a href="https://intervo.ai" target="_blank" style="display: inline-flex; align-items: center; text-decoration: none; color: #1f2937; font-family: sans-serif;">
+  <img 
+    src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-0e321543" 
+    alt="Intervo.ai Banner" 
+    style="width: 160px; margin-right: 12px;"
+  />
+
+</a>
 </p>
 
-<h1 align="center">Intervo.ai - Open-Source Conversational AI Platform</h1>
+<h1 align="center">Open-Source Conversational AI Platform</h1>
 
 <p align="center">
   <strong>Build, deploy, and manage advanced, goal-oriented AI agents for both voice and chat.</strong>
@@ -12,7 +17,7 @@
   <br />
   <a href="https://intervo.ai"><strong>Website</strong></a> ·
   <a href="https://docs.intervo.ai"><strong>Documentation</strong></a> ·
-  <a href="https://discord.gg/your-invite-link"><strong>Join our Discord Community</strong></a> ·
+  <a href="https://discord.gg/paFJtW8fkZ"><strong>Join our Discord Community</strong></a> ·
   <a href="https://github.com/Intervo/Intervo/issues"><strong>Report a Bug</strong></a>
 </p>
 
@@ -179,24 +184,74 @@ We welcome contributions of all kinds! Please see our [Contributing Guide](CONTR
 
 A huge thank you to the core team driving this project forward:
 
-<table>
+<table style="border-collapse: collapse; width: 100%; max-width: 600px;">
   <tr>
-    <td align="center">
-      <a href="https://github.com/manjunathm"><img src="https://github.com/manjunathm.png" width="100px;" alt="Manjunath M"/><br /><sub><b>Manjunath M</b></sub></a><br />
-      <small>Project Lead & Backend</small>
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-988fb5bb" width="60" height="60" alt="Manjunath M" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
     </td>
-    <td align="center">
-      <a href="https://github.com/hakhilnizeem"><img src="https://github.com/hakhilnizeem.png" width="100px;" alt="Hakhil Nizeem"/><br /><sub><b>Hakhil Nizeem</b></sub></a><br />
-      <small>Frontend & UI/UX</small>
-    </td>
-     <td align="center">
-      <a href="https://github.com/Intervo/Intervo/graphs/contributors">
-        <img src="https://contrib.rocks/image?repo=Intervo/Intervo" width="100px;" alt="All Contributors"/><br />
-        <sub><b>View All Contributors</b></sub>
-      </a>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Manjunath M</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Project Lead & Backend</span>
     </td>
   </tr>
+  
+  <tr style="background-color: #f8fafc;">
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-072139c4" width="60" height="60" alt="Hakhil Nizeem" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    </td>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Hakhil Nizeem</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Frontend & UI/UX</span>
+    </td>
+  </tr>
+  
+  <tr>
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-41eed53c" width="60" height="60" alt="Rahul" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    </td>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Rahul</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Frontend</span>
+    </td>
+  </tr>
+  
+  <tr style="background-color: #f8fafc;">
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-79794555" width="60" height="60" alt="Vasanth" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    </td>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Amar</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Community</span>
+    </td>
+  </tr>
+  
+  <tr>
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-c00b4124" width="60" height="60" alt="Geethu Sebastian" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    </td>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Geethu Sebastian</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Backend Dev</span>
+    </td>
+  </tr>
+  
+  <tr style="background-color: #f8fafc;">
+    <td style="padding: 16px; border: none;">
+      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-8c9aaec0" width="60" height="60" alt="Alex Chen" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    </td>
+    <td style="padding: 16px; border: none; vertical-align: middle;">
+      <strong style="font-size: 18px; color: #1f2937;">Vasanth</strong><br/>
+      <span style="color: #6b7280; font-size: 14px;">Frontend & Backendr</span>
+    </td>
+  </tr>
+  
+
 </table>
+
+
+    
+  
+
 
 ## 📄 License
 
