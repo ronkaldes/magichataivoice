@@ -211,7 +211,7 @@ A huge thank you to the core team driving this project forward:
     </td>
     <td style="padding: 16px; border: none; vertical-align: middle;">
       <strong style="font-size: 18px; color: #1f2937;">Rahul</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Frontend</span>
+      <span style="color: #6b7280; font-size: 14px;">Frontend Dev</span>
     </td>
   </tr>
   
