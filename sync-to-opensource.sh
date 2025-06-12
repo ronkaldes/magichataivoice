@@ -21,6 +21,7 @@ EXCLUDE_PATTERNS=(
     "packages/intervo-frontend/src/app/(admin)/admin/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/settings/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/agent/(agent)/[slug]/playground/canvas/"
+    "html-pages/"
     "**/node_modules"
     "**/dist"
     "**/build"
@@ -51,9 +52,9 @@ if [ -d "$OPENSOURCE_REPO" ]; then
 fi
 git clone "$OPENSOURCE_REMOTE_URL" "$OPENSOURCE_REPO"
 
-# Now sync the files to the cloned repo (without --delete to preserve open source changes)
+# Now sync the files to the cloned repo
 echo "🔄 Syncing files to cloned repo..."
-rsync -av --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
+rsync -av --delete --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
 
 # Clean up exclude file
 rm "$EXCLUDE_FILE"

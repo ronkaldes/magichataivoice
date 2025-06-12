@@ -12,11 +12,24 @@ from pathlib import Path
 import botocore
 import io
 
-# Load environment variables from .env.development
-env_path = Path(__file__).parent.parent / '.env.development'
-if not env_path.exists():
-    raise FileNotFoundError(f"Environment file not found at {env_path}")
-load_dotenv(dotenv_path=env_path)
+# Load environment variables - try production first, then development, then default .env
+base_path = Path(__file__).parent.parent
+env_files = ['.env.production', '.env.development', '.env']
+
+env_path = None
+for env_file in env_files:
+    potential_path = base_path / env_file
+    if potential_path.exists():
+        env_path = potential_path
+        break
+
+if env_path:
+    load_dotenv(dotenv_path=env_path)
+    print(f"Loaded environment from: {env_path}")
+else:
+    # Try to load from system environment variables if no file found
+    load_dotenv()
+    print("No .env file found, using system environment variables")
 
 logger = logging.getLogger(__name__)
 

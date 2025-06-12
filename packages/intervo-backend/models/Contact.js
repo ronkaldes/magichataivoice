@@ -6,7 +6,7 @@ const contactSchema = new mongoose.Schema({
   fullName: { type: String, trim: true },
   email: { type: String, required: true, trim: true, match: /.+@.+\..+/ },
   phoneNumber: { type: String, required: true, trim: true, match: /^\+?[1-9]\d{1,14}$/ },
-  countryCode: { type: String, required: true },
+  countryCode: { type: String, required: false },
   agent: { type: mongoose.Schema.Types.ObjectId, ref: "Agent", required: true },
   user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   createdAt: { type: Date, default: Date.now },
