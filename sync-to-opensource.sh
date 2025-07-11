@@ -56,6 +56,12 @@ git clone "$OPENSOURCE_REMOTE_URL" "$OPENSOURCE_REPO"
 echo "🔄 Syncing files to cloned repo..."
 rsync -av --exclude-from="$EXCLUDE_FILE" --exclude='.git/' "$INTERNAL_REPO/" "$OPENSOURCE_REPO/"
 
+# Force overwrite specific files
+echo "🔧 Force overwriting export-users.js..."
+if [ -f "$INTERNAL_REPO/export-users.js" ]; then
+    cp "$INTERNAL_REPO/export-users.js" "$OPENSOURCE_REPO/export-users.js"
+fi
+
 # Clean up exclude file
 rm "$EXCLUDE_FILE"
 
