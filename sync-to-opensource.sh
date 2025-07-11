@@ -22,6 +22,7 @@ EXCLUDE_PATTERNS=(
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/settings/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/agent/(agent)/[slug]/playground/canvas/"
     "html-pages/"
+    "users-export-*.csv"
     "**/node_modules"
     "**/dist"
     "**/build"
@@ -64,6 +65,28 @@ fi
 
 # Clean up exclude file
 rm "$EXCLUDE_FILE"
+
+# CRITICAL: Remove sensitive CSV file from all git history
+echo "🔥 CRITICAL: Removing users-export-2025-07-11.csv from ALL git history..."
+cd "$OPENSOURCE_REPO"
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+    # Use git filter-branch to completely remove the file from all history
+    git filter-branch --force --index-filter \
+        'git rm --cached --ignore-unmatch users-export-2025-07-11.csv' \
+        --prune-empty --tag-name-filter cat -- --all
+    
+    # Clean up the filter-branch backup refs
+    git for-each-ref --format='delete %(refname)' refs/original | git update-ref --stdin
+    
+    # Expire all reflog entries and garbage collect
+    git reflog expire --expire=now --all
+    git gc --prune=now --aggressive
+    
+    echo "✅ users-export-2025-07-11.csv completely removed from all git history"
+else
+    echo "⚠️  No git history found, skipping history cleanup"
+fi
+cd "$INTERNAL_REPO"
 
 # Replace docker-compose with simplified version
 cp opensource-docker-compose.yml "$OPENSOURCE_REPO/docker-compose.yml"
