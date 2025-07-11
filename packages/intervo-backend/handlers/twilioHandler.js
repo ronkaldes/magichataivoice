@@ -51,15 +51,16 @@ function extractConfig(customParameters) {
     activityId:customParameters['activity-id'] || customParameters['activityId'],
     widgetId: customParameters['widget-id'] || customParameters['widgetId'],
     contactId: customParameters['contact-id'] || customParameters['contactId'],
+    conversationId: customParameters['conversation-id'] || customParameters['conversationId'],
   };
 }
 
-let orchestrator;
 function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customParametersFromParams) {
 
   console.log(customParametersFromParams, "customParametersFromParams")
     let config={};
     let callRecorder = null;
+    let orchestrator; // Move orchestrator to be connection-specific
         /* Twilio connection
      * This is where most of the Realtime stuff happens. Highly performance sensitive.
      */ 
@@ -70,6 +71,7 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
     let streamSid;
     let isProcessingTTS = false;
     let ignoreNewTranscriptions = false;
+    let userInterrupted = { value: false }; // Use object to pass by reference
     let intentClassifier; // Store IntentClassifierAgent instance
     let callStartTime;
     let sessionTimeoutId; // Variable to store the 5-minute session timeout ID
@@ -92,7 +94,8 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
         console.log(customParametersFromParams, "customParametersFromParams")
         config = extractConfig(customParametersFromParams);
         config.conversationMode = mode;
-        config.conversationId = uuidv4();
+        // Use existing conversationId if provided, otherwise generate new one
+        config.conversationId = config.conversationId || uuidv4();
 
         
         // --- Start Recording Setup ---
@@ -280,7 +283,7 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
           });
           console.log("*****before initial gretting completed****", agentRooms)
 
-          await broadcastToAgentRoom(agentRooms, config.agentId, ws, greeting, config.conversationId);
+          await broadcastToAgentRoom(agentRooms, ws.roomKey, ws, greeting, config.conversationId);
         
           if(mode === "call"){
           await new Promise((resolve, reject) => {
@@ -300,11 +303,13 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
             timer,
             ws,
             wss,
+            agentRooms,
             ignoreNewTranscriptions,
             isProcessingTTS,
             processTranscription,
             resetInactivityTimeout,
-            inactivityTimeout
+            inactivityTimeout,
+            userInterrupted
           });
         }
         
@@ -328,7 +333,7 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
       }
 
       if(data.event==="chat_message"){
-        console.log("*********chat_message*********", data.chat_message)
+        console.log("*********chat_message*********", data.message)
         await processTranscription(data.message.text)
       }
     });
@@ -513,7 +518,7 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
       console.log(`[${timer()}] Processing transcription: "${transcription}"`);
 
       ignoreNewTranscriptions = true;
-      recognizeStream?.pause();
+      // recognizeStream?.pause();
       callRecorder?.pauseIncoming();
 
       // Initialize full orchestration
@@ -534,7 +539,7 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
 
       console.log(conversationHistory, "conversationHistory")
 
-      registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, timer, conversationHistory, agentRooms, config.agent, callRecorder);
+      registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, timer, conversationHistory, agentRooms, config.agent, callRecorder, userInterrupted);
 
       try {
 
@@ -551,19 +556,19 @@ function handleTwilioConnection(ws, req, wss, agentRooms, mode="call", customPar
       } finally {
         // Reset state
         ignoreNewTranscriptions = false;
-        if (mode === "call"){
-          console.log(`[${timer()}] Ready for new transcriptions, restarting stream`);
-          recognizeStream = await createSpeechRecognizeStream(config, {
-            timer,
-            ws,
-            wss,
-            ignoreNewTranscriptions,
-            isProcessingTTS,
-            processTranscription,
-            resetInactivityTimeout,
-            inactivityTimeout
-          });
-        }
+        // if (mode === "call"){
+        //   console.log(`[${timer()}] Ready for new transcriptions, restarting stream`);
+        //   recognizeStream = await createSpeechRecognizeStream(config, {
+        //     timer,
+        //     ws,
+        //     wss,
+        //     ignoreNewTranscriptions,
+        //     isProcessingTTS,
+        //     processTranscription,
+        //     resetInactivityTimeout,
+        //     inactivityTimeout
+        //   });
+        // }
         // Reset inactivity timer only after all processing for this turn is complete
         resetSessionInactivityTimeout();
       }
@@ -574,8 +579,8 @@ function startTimer() {
   return () => `${((Date.now() - startTime) / 1000).toFixed(2)}s`;
 }
 
-async function broadcastToAgentRoom(agentRooms, agentId, ws, response, conversationId) {
-  const agentRoom = agentRooms.get(agentId);
+async function broadcastToAgentRoom(agentRooms, roomKey, ws, response, conversationId) {
+  const agentRoom = agentRooms.get(roomKey);
   
   if (agentRoom) {
     // Get conversation state directly
@@ -605,7 +610,7 @@ async function broadcastToAgentRoom(agentRooms, agentId, ws, response, conversat
   }
 }
 
-function registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, timer, conversationHistory, agentRooms, agent, callRecorder) {
+function registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, timer, conversationHistory, agentRooms, agent, callRecorder, userInterrupted) {
   // Register general response handler (for UI updates)
   orchestrator.onResponse({
     type: 'general',
@@ -617,7 +622,7 @@ function registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, 
       // });
       
       // Replace the broadcasting code with the new function
-      broadcastToAgentRoom(agentRooms, config.agentId, ws, response, config.conversationId);
+              broadcastToAgentRoom(agentRooms, ws.roomKey, ws, response, config.conversationId);
     }
   });
 
@@ -626,6 +631,9 @@ function registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, 
     type: 'tts',
     callback: async (response) => {
       try {
+        // Reset interruption flag when starting new TTS
+        userInterrupted.value = false;
+        
         await new Promise((resolve, reject) => {
           console.log(response.shouldUseAudio, typeof response.audio, "response audio")
           if (response.shouldUseAudio && response.audio) {
@@ -651,11 +659,11 @@ function registerOrchestratorHandlers(orchestrator, ws, wss, streamSid, config, 
           } else {
             // Fallback to TTS
             const ttsFunction = getTTSService(agent?.ttsSettings?.service);
-            // Pass callRecorder instance to TTS function
+            // Pass callRecorder instance and interruption checker to TTS function
             ttsFunction(response.text, ws, streamSid, { ...agent?.ttsSettings }, () => {
               console.log(`[${timer()}] TTS completed for: ${response.agent}`);
               resolve();
-            }, true, callRecorder).catch(reject); // <-- Pass callRecorder
+            }, true, callRecorder, userInterrupted).catch(reject); // <-- Pass userInterrupted
           }
         });
       } catch (error) {

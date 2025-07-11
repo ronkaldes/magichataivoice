@@ -315,7 +315,7 @@ export function SourceProvider({ children }) {
     return await response.json();
   };
 
-  const getAllSources = async (config = {}) => {
+  const getAllSources = async () => {
     const response = await fetch(`${backendAPIUrl}/knowledge-source/sources`, {
       credentials: "include",
     });
@@ -326,9 +326,9 @@ export function SourceProvider({ children }) {
     if (
       result &&
       result.length > 0 &&
-      config?.knowledgeBase?.sources?.length > 0
+      aiConfig?.knowledgeBase?.sources?.length > 0
     ) {
-      const currentAgentSourceId = config.knowledgeBase.sources[0];
+      const currentAgentSourceId = aiConfig.knowledgeBase.sources[0];
       const currentAgentSource = result.find(
         (source) => source._id === currentAgentSourceId
       );

@@ -1,11 +1,12 @@
 const removeMarkdown = require('remove-markdown');
-const ConversationLogger = require('./ConversationLogger');
+const ConversationState = require('./ConversationState');
 
 class OrchestrationManager {
 constructor(config, agentRooms) {
 
   console.log("*********orchestartionNodes*********", config, agentRooms)
     this.agents = new Map();
+    this.workflowAgents = new Map(); // Map nodeId -> BaseAgent instance
 
     this.responseCallbacks = new Map();
     this.ttsQueue = [];
@@ -13,13 +14,21 @@ constructor(config, agentRooms) {
     
     this.config = config;
     this.logger = null; // Will be initialized when we have conversationId
+    this.toolManager = null; // Will be initialized dynamically
+    this.orchestrationFlow = null;
   }
 
   // Add a new async initialization method
 async initialize() {
+    // Initialize ES module dependencies dynamically
+    const { default: ConversationLogger } = await import('./ConversationLogger.js');
+    const { default: ToolManager } = await import('./ToolManager.js');
+    
+    this.toolManager = new ToolManager();
+    
     if (this.config?.conversationId) {
         this.conversationId = this.config.conversationId;
-        this.state = await require('./ConversationState').getInstance(this.conversationId);
+        this.state = await ConversationState.getInstance(this.conversationId);
         
         // Initialize conversation logger
         this.logger = new ConversationLogger(this.conversationId);
@@ -29,12 +38,40 @@ async initialize() {
         
         console.log('OrchestrationManager initialized with logger for conversation:', this.conversationId);
     }
+
+    // Load and initialize workflow if agent configuration is provided
+    if (this.config?.agentId) {
+        await this.loadAgentWorkflow(this.config.agentId);
+    }
+    
     return this;
+}
+
+// Load agent's orchestration workflow from database
+async loadAgentWorkflow(agentId) {
+    try {
+        const Agent = require('../models/Agent');
+        const agent = await Agent.findById(agentId);
+        
+        if (agent && agent.orchestrationFlow) {
+            console.log(`Loading orchestration workflow for agent ${agentId}`);
+            this.initializeWorkflow(agent.orchestrationFlow);
+        } else {
+            console.log(`No orchestration workflow found for agent ${agentId}`);
+        }
+    } catch (error) {
+        console.error('Error loading agent workflow:', error);
+    }
 }
 
 
   registerAgent(agent) {
     this.agents.set(agent.name, agent);
+    
+    // Inject tool manager into the agent
+    if (agent.setToolManager) {
+      agent.setToolManager(this.toolManager);
+    }
   }
 
   onResponse({ type, callback }) {
@@ -62,8 +99,13 @@ async initialize() {
         await this.logger.logUserInput(input);
       }
 
-      // 1. Collect responses from all agents in parallel
-      const agentPromises = Array.from(this.agents.values()).map(async agent => {
+      // 1. Collect responses from all agents (both registered and workflow agents) in parallel
+      const allAgents = [
+        ...Array.from(this.agents.values()), // Traditional registered agents
+        ...Array.from(this.workflowAgents.values()) // Workflow-based agents
+      ];
+      
+      const agentPromises = allAgents.map(async agent => {
         try {
           const agentStartTime = Date.now();
 
@@ -300,16 +342,23 @@ async initialize() {
 
         if (callbacks) {
           for (const callback of callbacks) {
-            // Create a copy for TTS with plain text
-            const ttsResponse = { ...response };
-            if (ttsResponse.text) {
-              ttsResponse.text = removeMarkdown(ttsResponse.text);
+            try {
+              // Create a copy for TTS with plain text
+              const ttsResponse = { ...response };
+              if (ttsResponse.text) {
+                ttsResponse.text = removeMarkdown(ttsResponse.text);
+              }
+              
+              await callback({
+                ...ttsResponse,
+                shouldUseAudio: !!ttsResponse.audio // Flag to indicate audio availability
+              });
+            } catch (error) {
+              // Don't let individual TTS errors stop the entire queue processing
+              // Interruption errors are normal and shouldn't break the queue
+              console.error(`TTS callback error (continuing queue processing):`, error.message);
+              this.isProcessingTTS = false;
             }
-            
-            await callback({
-              ...ttsResponse,
-              shouldUseAudio: !!ttsResponse.audio // Flag to indicate audio availability
-            });
           }
         }
       }
@@ -335,10 +384,125 @@ async initialize() {
     }
   }
 
+  // Initialize workflow agents and their tools
+ async initializeWorkflow(orchestrationFlow) {
+    if (!orchestrationFlow || !orchestrationFlow.nodes) {
+      console.log('No orchestration flow provided');
+      return;
+    }
+
+    this.orchestrationFlow = orchestrationFlow;
+    console.log('Initializing workflow with', orchestrationFlow.nodes.length, 'nodes');
+
+    // Create BaseAgent instances for each node
+    orchestrationFlow.nodes.forEach(node => {
+      if (this.isAgentNode(node)) {
+        const agent = this.createAgentFromNode(node);
+        if (agent) {
+          this.workflowAgents.set(node.id, agent);
+          console.log(`Created workflow agent for node ${node.id}: ${agent.name}`);
+        }
+      }
+    });
+
+    // Initialize tools for the entire workflow (pass agentId for credential loading)
+    await this.toolManager.initializeFromWorkflow(orchestrationFlow, this.config?.agentId);
+    
+    // Inject specific tools into specific agents
+    await this.assignToolsToAgents();
+    
+    console.log('Workflow initialized with agents:', Array.from(this.workflowAgents.keys()));
+    console.log('Tools health:', this.toolManager.getToolsHealth());
+  }
+
+  isAgentNode(node) {
+    // Determine if a node represents an agent (vs other node types like connectors)
+    return node.type === 'agent' || 
+           node.type === 'customNode' || 
+           (node.data && node.data.settings && node.data.settings.type);
+  }
+
+  createAgentFromNode(node) {
+    const { BaseAgent } = require('../agents/BaseAgent');
+    
+    const nodeSettings = node.data?.settings || {};
+    const agentConfig = {
+      type: nodeSettings.type || 'workflow-agent',
+      settings: {
+        ...nodeSettings,
+        nodeId: node.id,
+        workflowNode: true
+      },
+      aiService: nodeSettings.aiService || 'groq',
+      aiConfig: nodeSettings.aiConfig || {
+        temperature: 0.7,
+        maxTokens: 150
+      }
+    };
+
+    const agentName = nodeSettings.name || `workflow-agent-${node.id}`;
+    const agent = new BaseAgent(agentName, agentConfig);
+    
+    // Store reference to the node
+    agent.nodeId = node.id;
+    agent.nodeData = node.data;
+    
+    return agent;
+  }
+
+  async assignToolsToAgents() {
+    // Assign tools to specific agents based on their node configuration
+    const { default: ToolManager } = await import('./ToolManager.js');
+    
+    for (const node of this.orchestrationFlow.nodes) {
+      const agent = this.workflowAgents.get(node.id);
+      if (!agent) continue;
+
+      // Check if this node has tools defined
+      const nodeTools = node.data?.settings?.tools || [];
+      const nodeTool = node.data?.settings?.tool;
+      
+      if (nodeTools.length > 0 || nodeTool) {
+        // Create a node-specific tool manager for this agent
+        const nodeToolManager = new ToolManager();
+        
+        // Initialize tools for this specific node
+        const nodeFlow = {
+          nodes: [node], // Only this node
+          edges: []
+        };
+        await nodeToolManager.initializeFromWorkflow(nodeFlow, this.config?.agentId);
+        
+        // Inject the node-specific tool manager
+        agent.setToolManager(nodeToolManager);
+        
+        console.log(`Assigned ${nodeToolManager.getAllTools().length} tools to agent ${agent.name} (node ${node.id})`);
+      } else {
+        // Agent has no tools
+        console.log(`Agent ${agent.name} (node ${node.id}) has no tools defined`);
+      }
+    }
+  }
+
+  // Get workflow agent by node ID
+  getWorkflowAgent(nodeId) {
+    return this.workflowAgents.get(nodeId);
+  }
+
+  // Get all workflow agents
+  getWorkflowAgents() {
+    return Array.from(this.workflowAgents.values());
+  }
+
+  // Get tool manager for external access
+  getToolManager() {
+    return this.toolManager;
+  }
+
   // When the conversation ends
   cleanup() {
-    require('./ConversationState').cleanup(this.conversationId);
+    ConversationState.cleanup(this.conversationId);
   }
 }
 
-module.exports = OrchestrationManager;  // Remove the curly braces
+module.exports = OrchestrationManager;

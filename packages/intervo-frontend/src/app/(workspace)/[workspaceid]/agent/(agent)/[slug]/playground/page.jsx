@@ -39,12 +39,9 @@ import AgentPlayGroundChat from "./AgentPlayGroundChat";
 import { transformAgentData } from "@/lib/utils";
 import WelcomeDialog from "./WelcomeDialog";
 import EmbeddedWelcomeDialog from "./EmbeddedWelcomeDialog";
-import WorkflowPreview from "./WorkflowPreview";
 import KnowledgeBaseDialog from "./KnowledgeBaseDialog";
 import KnowledgeBaseSelector from "@/components/playground/KnowledgeBaseSelector";
-import PrerequisitesPopup from "./PrerequisitesPopup";
 import { useSource } from "@/context/SourceContext";
-import { useWorkspace } from "@/context/WorkspaceContext";
 import { useCallbackRef } from "@/hooks/useCallbackRef";
 import { useBeforeUnload } from "@/hooks/useBeforeUnload";
 import { useNavigationOverride } from "@/hooks/useNavigationOverride";
@@ -98,7 +95,6 @@ function PlaygroundPage({ params }) {
   const { fetchWithAuth } = useAuthenticatedFetch();
   const [activeTab, setActiveTab] = useState("transcript");
   const { getAllSources, needsTraining } = useSource();
-  const { checkAndShowPricingPopup } = useWorkspace();
 
   // State for knowledge base sources
   const [knowledgeBases, setKnowledgeBases] = useState([]);
@@ -107,11 +103,6 @@ function PlaygroundPage({ params }) {
   // Add this state near the top of the component
   const [isPublishing, setIsPublishing] = useState(false);
   const [isFirstTimePublish, setIsFirstTimePublish] = useState(false);
-
-  // State for prerequisites popup
-  const [prerequisitesPopupOpen, setPrerequisitesPopupOpen] = useState(false);
-  const [shouldWiggleKnowledgeBase, setShouldWiggleKnowledgeBase] =
-    useState(false);
 
   // State for current onboarding step
   const [currentOnboardingStepIndex, setCurrentOnboardingStepIndex] =
@@ -183,22 +174,6 @@ function PlaygroundPage({ params }) {
   useEffect(() => {
     // Only proceed if aiConfig is loaded and has properties
     if (aiConfig && Object.keys(aiConfig).length > 0 && !versionChecked) {
-      // Check for openKnowledgeBase URL parameter (from canvas navigation)
-      const openKnowledgeBase = searchParams.get("openKnowledgeBase");
-
-      if (openKnowledgeBase === "true") {
-        // Force open knowledge base dialog when coming from canvas
-        setWelcomeDialogOpen(false);
-        setKnowledgeBaseDialogOpen(true);
-        setIsManagingKnowledgeBase(true);
-        setVersionChecked(true);
-        // Clear the URL parameter
-        const url = new URL(window.location);
-        url.searchParams.delete("openKnowledgeBase");
-        window.history.replaceState({}, "", url);
-        return;
-      }
-
       // If the agent version is 0 or null, show the welcome dialog
       if (aiConfig.version === 0 || aiConfig.version === null) {
         setWelcomeDialogOpen(true);
@@ -217,7 +192,7 @@ function PlaygroundPage({ params }) {
       // Mark that we've checked the version to avoid repeated checks
       setVersionChecked(true);
     }
-  }, [aiConfig?._id, versionChecked, searchParams]); // Add searchParams to dependencies
+  }, [aiConfig?._id, versionChecked]); // Only depend on ID, not the entire object
 
   useEffect(() => {
     console.log("Slug effect running, slug:", slug);
@@ -351,29 +326,6 @@ function PlaygroundPage({ params }) {
 
   // Update the handlePublishAgentClick function
   const handlePublishAgentClick = async () => {
-    // First check if user has sufficient credits (pricing popup)
-    const needsPricing = checkAndShowPricingPopup();
-    if (needsPricing) {
-      // User needs to upgrade, pricing popup was shown
-      return false;
-    }
-
-    // Check prerequisites before publishing
-    const hasPrerequisites = workflowNeedsUpdate || needsTraining;
-
-    if (hasPrerequisites) {
-      setPrerequisitesPopupOpen(true);
-
-      // Start wiggle animation for knowledge base button if needed
-      if (needsTraining) {
-        setShouldWiggleKnowledgeBase(true);
-        // Stop wiggling after 6 seconds
-        setTimeout(() => setShouldWiggleKnowledgeBase(false), 6000);
-      }
-
-      return false;
-    }
-
     setIsPublishing(true);
     // Remember initial publish state before updating
     const wasPublished = aiConfig?.published;
@@ -458,7 +410,7 @@ function PlaygroundPage({ params }) {
   useEffect(() => {
     const fetchSources = async () => {
       try {
-        const sources = await getAllSources(aiConfig);
+        const sources = await getAllSources();
         setKnowledgeBases(sources);
 
         // If aiConfig has a selected source, set it
@@ -517,8 +469,6 @@ function PlaygroundPage({ params }) {
   const handleManageKnowledgeBase = () => {
     setIsManagingKnowledgeBase(true);
     setKnowledgeBaseDialogOpen(true);
-    // Stop wiggling when user clicks the button
-    setShouldWiggleKnowledgeBase(false);
   };
 
   // Handle closing knowledge base dialog
@@ -620,12 +570,15 @@ function PlaygroundPage({ params }) {
                 knowledgeBases={knowledgeBases}
                 selectedKnowledgeBase={selectedKnowledgeBase}
                 onSelectKnowledgeBase={handleKnowledgeBaseSelect}
-                shouldWiggle={shouldWiggleKnowledgeBase}
               />
 
               {/* Chat Area - responsive width */}
-              <div className="flex-1 border rounded-lg w-full">
-                <WorkflowPreview />
+              <div className="flex-1 border rounded-lg w-full md:w-[534px]">
+                <EmbeddedWelcomeDialog
+                  agentType={aiConfig?.agentType || ""}
+                  agentPrompt={aiConfig?.prompt || ""}
+                  onWorkflowGenerated={() => handleWorkflowGenerated(false)}
+                />
               </div>
             </>
           )}
@@ -749,7 +702,11 @@ function PlaygroundPage({ params }) {
                               // For published agents, just a button (not DialogTrigger)
                               <Button
                                 onClick={handlePublishAgentClick}
-                                disabled={isPublishing}
+                                disabled={
+                                  isPublishing ||
+                                  workflowNeedsUpdate ||
+                                  needsTraining
+                                }
                                 className="flex justify-end items-center gap-1 px-4 py-2 bg-primary hover:bg-primary/90 text-sm leading-6 font-medium font-sans text-primary-foreground rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isPublishing
@@ -761,7 +718,11 @@ function PlaygroundPage({ params }) {
                               <Button
                                 variant="primary"
                                 onClick={handlePublishAgentClick}
-                                disabled={isPublishing}
+                                disabled={
+                                  isPublishing ||
+                                  workflowNeedsUpdate ||
+                                  needsTraining
+                                }
                                 className="flex justify-end items-center gap-1 px-4 py-2 bg-primary hover:bg-primary/90 text-sm leading-6 font-medium font-sans text-primary-foreground rounded-md disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 {isPublishing
@@ -932,13 +893,6 @@ function PlaygroundPage({ params }) {
                 ?.name || ""
             : ""
         }
-      />
-      <PrerequisitesPopup
-        open={prerequisitesPopupOpen}
-        onOpenChange={setPrerequisitesPopupOpen}
-        workflowNeedsUpdate={workflowNeedsUpdate}
-        needsTraining={needsTraining}
-        onAddToKnowledgeBase={handleManageKnowledgeBase}
       />
     </div>
   );

@@ -13,4 +13,6 @@ rag/__pycache__
 vector_stores
 rag_py/llm_services/__pycache__
 rag_py.egg-info
+rag_venv/
 conversation-logs
+recordings/

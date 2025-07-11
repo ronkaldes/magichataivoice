@@ -27,7 +27,7 @@ function createSsml(text, voiceShortName) {
     </speak>`;
 }
 
-async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null) {
+async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null, userInterrupted = null) {
   // Azure Speech configuration
   const speechConfig = sdk.SpeechConfig.fromSubscription(
     process.env.AZURE_SPEECH_KEY,
@@ -103,6 +103,18 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
 
     // Helper: send the next chunk in the queue, then schedule another send
     const sendNextChunk = () => {
+      // Check for user interruption
+      if (userInterrupted && userInterrupted.value) {
+        console.log(`[${new Date().toISOString()}] User interruption detected, stopping Azure TTS playback`);
+        isSending = false;
+        synthesisEncounteredError = new Error("User interrupted TTS playback");
+        chunkQueue = [];
+        // Mark all sentences as completed to trigger finalization
+        sentencesCompleted = sentences.length;
+        checkAndFinalize();
+        return;
+      }
+
       // Stop if WebSocket closed or an error occurred during processing
       if (ws.readyState !== WebSocket.OPEN || synthesisEncounteredError) {
         isSending = false;
@@ -197,6 +209,13 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
         console.log(`[${new Date().toISOString()}] Synthesizing sentence ${i + 1}/${sentences.length}: "${sentence.substring(0,50)}..."`);
         const ssml = createSsml(sentence, voiceShortName);
 
+        // Check for user interruption before processing each sentence
+        if (userInterrupted && userInterrupted.value) {
+          console.log(`[${new Date().toISOString()}] User interruption detected before sentence ${i + 1}, stopping Azure TTS`);
+          synthesisEncounteredError = new Error("User interrupted TTS playback");
+          break;
+        }
+
         // Synthesize one sentence - Use a Promise to wait for its completion/failure
         await new Promise((sentenceResolve, sentenceReject) => {
           // Create a NEW synthesizer for this sentence
@@ -218,6 +237,15 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
           // Fired as chunks of audio become available (uses shared enqueue)
           synthesizer.synthesizing = (s, e) => {
              if (sentenceCompletedOrFailed) return;
+             
+             // Check for user interruption during synthesis
+             if (userInterrupted && userInterrupted.value) {
+               console.log(`[${new Date().toISOString()}] User interruption detected during synthesis of sentence ${i + 1}, stopping`);
+               synthesisEncounteredError = new Error("User interrupted TTS playback");
+               cleanupSentence(synthesisEncounteredError);
+               return;
+             }
+             
              if (e.result.reason === sdk.ResultReason.SynthesizingAudio) {
               const audioChunk = Buffer.from(e.result.audioData);
               // Record immediately
@@ -278,6 +306,7 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
             synthesisEncounteredError = synthesisEncounteredError || err; // Record the first error encountered
             // Don't re-throw, allow loop to continue checking (to potentially skip remaining)
             // or proceed to finally block. The error is recorded.
+            throw err;
         });
 
         // If an error occurred during the awaited promise, break the loop

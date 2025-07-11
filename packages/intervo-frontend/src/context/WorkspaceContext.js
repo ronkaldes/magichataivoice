@@ -9,8 +9,6 @@ const backendAPIUrl = returnAPIUrl();
 
 const WorkspaceContext = createContext();
 
-export { WorkspaceContext };
-
 export function WorkspaceProvider({ children }) {
   const [workspaceInfo, setWorkspaceInfo] = useState({});
   const [workspaceId, setWorkspaceId] = useState(null);
@@ -981,28 +979,13 @@ export function WorkspaceProvider({ children }) {
   };
 
   const checkAndShowPricingPopup = () => {
-    // Don't show pricing popup if still loading subscription details
-    if (subscriptionLoading || !workspaceId) {
-      return false;
-    }
-
-    // Check if user has sufficient credits to proceed
-    const creditBalance =
-      subscriptionDetails?.creditInfo?.totalRemainingCredits || 0;
-    const planType = subscriptionDetails?.planType;
-    const isActive = subscriptionDetails?.isActive;
-
-    // Determine if user should see pricing popup based on credits and plan type
+    // Check if user should see pricing popup (not logged in, no active subscription, etc.)
     const shouldShowPricing =
-      // No credits available
-      creditBalance <= 0 &&
-      // Free plan with no credits
-      (planType === "free" ||
-        planType === "free_with_credits" ||
-        // No active subscription
-        !isActive ||
-        // Not on a paid plan (subscription or PAYG)
-        (planType !== "subscription" && planType !== "pay_as_you_go"));
+      !workspaceId ||
+      (!subscriptionLoading &&
+        (!subscriptionDetails?.isActive ||
+          (!subscriptionDetails?.planType === "subscription" &&
+            !subscriptionDetails?.planType === "pay_as_you_go")));
 
     if (shouldShowPricing) {
       showPricingPopup();

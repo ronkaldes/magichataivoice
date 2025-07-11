@@ -5,12 +5,16 @@ async function createDeepgramRecognizeStream({
   timer, 
   ws, 
   wss, 
+  agentRooms, // The agent rooms map for room-specific broadcasting
   ignoreNewTranscriptions, 
   isProcessingTTS, 
   processTranscription, 
   resetInactivityTimeout, // Keep for consistency, though Deepgram endpointing handles silence
   inactivityTimeout,
-  endPointingMs
+  endPointingMs,
+  userInterrupted,
+  agentConfig={},
+  applyLexicalEnhancementPostProcessing
 }) {
   const deepgramApiKey = process.env.DEEPGRAM_API_KEY;
 
@@ -30,14 +34,42 @@ async function createDeepgramRecognizeStream({
   let isReady = false; // Flag to ensure connection is open before writing
 
   try {
+    // Build keywords for Deepgram's keyword boosting
+    const keywords = [];
+    
+    // Add default keywords
+    keywords.push("CodeDesign:1", "Intervo:1");
+    
+    // Add lexical enhancement terms if available and enabled
+    if (agentConfig?.interactionSettings?.lexicalEnhancement?.enabled && 
+        agentConfig?.interactionSettings?.lexicalEnhancement?.terms?.length > 0) {
+      agentConfig.interactionSettings.lexicalEnhancement.terms.forEach(term => {
+        if (term.word) {
+          keywords.push(`${term.word}:1`);
+          // Also add pronunciation as a keyword if it's different from the word
+          if (term.pronunciation && term.pronunciation !== term.word) {
+            keywords.push(`${term.pronunciation}:1`);
+            
+            // Add common pronunciation variants
+            const pronunciation = term.pronunciation.toLowerCase();
+            if (pronunciation.includes('-')) {
+              keywords.push(`${pronunciation.replace(/-/g, ' ')}:1`);
+              keywords.push(`${pronunciation.replace(/-/g, '')}:1`);
+            }
+          }
+        }
+      });
+    }
+
     connection = deepgramClient.listen.live({
       model: "nova-2-phonecall", // Model optimized for telephony
       language: "en-US",
       encoding: "mulaw", 
       sample_rate: 8000, 
       punctuate: true,
-      interim_results: false, // We only want final results
+      interim_results: true, // Enable interim results for interruption detection
       endpointing: endPointingMs, // Milliseconds of silence to detect end of utterance (adjust as needed)
+      keywords: keywords.length > 0 ? keywords : undefined, // Add keywords for boosting if available
     });
 
     connection.on(LiveTranscriptionEvents.Open, () => {
@@ -49,6 +81,19 @@ async function createDeepgramRecognizeStream({
       // console.log(`[${timer()}] Deepgram Transcript received:`, JSON.stringify(data, null, 2));
       const transcript = data.channel?.alternatives?.[0]?.transcript;
       
+      // Handle interim results for interruption detection
+      if (transcript && !data.is_final) {
+        // If this is an interim result and we're currently processing TTS, set interruption flag
+        if ( transcript.trim()) {
+          console.log(`[${timer()}] User interruption detected during TTS: ${transcript}`);
+          if (userInterrupted) {
+            userInterrupted.value = true;
+          }
+          return; // Don't process interim results further
+        }
+        return; // Skip other interim processing
+      }
+      
       // We configured interim_results: false, but double-check is_final
       if (transcript && data.is_final) {
         if (ignoreNewTranscriptions || isProcessingTTS || isPaused) {
@@ -56,15 +101,23 @@ async function createDeepgramRecognizeStream({
           return;
         }
         
-        // Send to UI clients
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN && client !== ws) {
-            client.send(JSON.stringify({ event: "transcription", source: "user", text: transcript }));
-          }
-        });
+        // Apply lexical enhancement post-processing to fix common confusions
+        const processedTranscription = applyLexicalEnhancementPostProcessing ? 
+          applyLexicalEnhancementPostProcessing(transcript, agentConfig?.interactionSettings) : 
+          transcript;
+        
+        // Send processed transcription to room-specific clients only
+        if (ws.roomKey && agentRooms && agentRooms.has(ws.roomKey)) {
+          const room = agentRooms.get(ws.roomKey);
+          room.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN && client !== ws) {
+              client.send(JSON.stringify({ event: "transcription", source: "user", text: processedTranscription }));
+            }
+          });
+        }
 
         clearTimeout(inactivityTimeout); // Clear timer on final result
-        await processTranscription(transcript);
+        await processTranscription(processedTranscription);
       } else if (!data.is_final && transcript) {
           // console.log(`[${timer()}] Deepgram Interim: "${transcript}"`);
           // Handle interim if needed in the future, e.g., for UI

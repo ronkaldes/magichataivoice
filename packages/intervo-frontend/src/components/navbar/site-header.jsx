@@ -174,7 +174,7 @@ export function SiteHeader() {
                         href={`/${workspaceId}${item.href}`}
                         className={`${navigationMenuTriggerStyle()} ${
                           isActive
-                            ? "relative after:absolute after:bottom-[-6px] after:left-2 after:right-2 after:h-0.5 after:bg-primary"
+                            ? "relative after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-primary"
                             : ""
                         }`}
                       >

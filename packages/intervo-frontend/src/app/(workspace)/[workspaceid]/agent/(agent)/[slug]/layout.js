@@ -7,7 +7,6 @@ import { SiteHeader } from "@/components/navbar/AgentNavbar";
 import { ActivitiesProvider } from "@/context/ActivitiesContext";
 import { SourceProvider } from "@/context/SourceContext";
 import { PhoneNumberProvider } from "@/context/PhoneNumberContext";
-import LayoutWrapper from "./components/LayoutWrapper";
 
 export const metadata = {
   title: "Agent Playground",
@@ -15,17 +14,16 @@ export const metadata = {
 
 export default async function RootLayout({ children, params }) {
   const { slug } = await params;
-
   return (
     <AuthProvider>
       <SourceProvider>
         <PlaygroundProvider>
           <ActivitiesProvider>
             <PhoneNumberProvider>
-              <LayoutWrapper>
+              <div className="flex flex-col gap-6">
                 <SiteHeader slug={slug} />
                 {children}
-              </LayoutWrapper>
+              </div>
               <Toaster />
             </PhoneNumberProvider>
           </ActivitiesProvider>

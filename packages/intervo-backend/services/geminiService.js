@@ -2,7 +2,7 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 class GeminiService {
   constructor() {
-    this.apiKey = "AIzaSyA6n5QT50L_WTXsoUQDm-iZeoB-VO5gt0s";
+    this.apiKey = process.env.GEMINI_API_KEY;
     this.genAI = new GoogleGenerativeAI(this.apiKey);
     this.model = "gemini-2.0-flash"; // Default model
   }

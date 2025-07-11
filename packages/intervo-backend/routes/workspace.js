@@ -320,9 +320,9 @@ router.post("/invite", async (req, res) => {
 
     // Check if user exists
     const existingUser = await User.findOne({ email: email.toLowerCase() });
-    if (!existingUser) {
-      return res.status(404).json({ error: "No user found with this email" });
-    }
+    // if (!existingUser) {
+    //   return res.status(404).json({ error: "No user found with this email" });
+    // }
 
     const existingInvite = workspace.pendingInvites.find(
       (invite) => invite.email === email

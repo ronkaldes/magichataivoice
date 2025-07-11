@@ -47,6 +47,7 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
   const [typedText, setTypedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const typingAnimationRef = useRef(null);
+  const lastTypingTimeRef = useRef(0);
 
   // Auto-scroll transcript when new messages arrive
   useEffect(() => {
@@ -66,68 +67,70 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
 
   // Typing effect for agent messages
   useEffect(() => {
-    // Find the last agent message
-    const lastAgentMessageIndex = messages.length - 1;
-    if (lastAgentMessageIndex < 0) {
-      return;
-    }
-
-    const lastMessage = messages[lastAgentMessageIndex];
-    const isAgentMessage =
-      lastMessage.source && lastMessage.source.toLowerCase() !== "user";
-
-    // If the last message is not from the agent, ensure we stop any typing
-    if (!isAgentMessage) {
-      if (isTyping) {
-        setIsTyping(false);
-      }
-      return;
-    }
-
-    // --- Animation Logic ---
-
-    // Stop any previous animation frame
+    // Clear any existing animation frame
     if (typingAnimationRef.current) {
       cancelAnimationFrame(typingAnimationRef.current);
     }
 
-    // If a new agent message has arrived, reset the animation state
-    if (typingMessageIndex !== lastAgentMessageIndex) {
-      setTypingMessageIndex(lastAgentMessageIndex);
-      setTypedText("");
-      setIsTyping(true); // This signals the start of a new animation
-      return; // Return early to wait for re-render with new state
-    }
+    // Find the last agent message that hasn't been fully typed yet
+    const lastAgentMessageIndex = messages.length - 1;
 
-    // Continue the animation for the current message
-    if (isTyping) {
-      const messageText = lastMessage.text || "";
-      if (typedText.length >= messageText.length) {
-        setIsTyping(false); // Finished typing
-        return;
-      }
+    if (lastAgentMessageIndex >= 0) {
+      const lastMessage = messages[lastAgentMessageIndex];
 
-      // Animation frame logic
-      const typeAnimation = () => {
-        // Ensure we are still typing the same message
-        if (typingMessageIndex === lastAgentMessageIndex) {
-          const currentMessage = messages[lastAgentMessageIndex];
-          const currentText = currentMessage ? currentMessage.text || "" : "";
-          setTypedText(currentText.slice(0, typedText.length + 1));
+      // Only apply typing effect to agent messages (not user messages)
+      if (lastMessage.source && lastMessage.source.toLowerCase() !== "user") {
+        const messageText = lastMessage.text || "";
+
+        // If this is a new message or we're not currently typing this message
+        if (typingMessageIndex !== lastAgentMessageIndex) {
+          setTypingMessageIndex(lastAgentMessageIndex);
+          setTypedText("");
+          setIsTyping(true);
+          lastTypingTimeRef.current = performance.now() + 100; // Initial delay of 100ms
         }
-      };
 
-      // Schedule the next frame
-      typingAnimationRef.current = setTimeout(typeAnimation, 50);
+        // If we're currently typing this message and haven't finished
+        if (
+          typingMessageIndex === lastAgentMessageIndex &&
+          typedText.length < messageText.length
+        ) {
+          const typeAnimation = (currentTime) => {
+            if (currentTime >= lastTypingTimeRef.current) {
+              setTypedText((prev) => {
+                const nextText = messageText.slice(0, prev.length + 1);
+
+                // If we've reached the end, stop typing
+                if (nextText.length >= messageText.length) {
+                  setIsTyping(false);
+                  return messageText;
+                }
+
+                // Schedule next character with 500ms delay
+                lastTypingTimeRef.current = currentTime + 50;
+                typingAnimationRef.current =
+                  requestAnimationFrame(typeAnimation);
+                return nextText;
+              });
+            } else {
+              // Continue checking until it's time for the next character
+              typingAnimationRef.current = requestAnimationFrame(typeAnimation);
+            }
+          };
+
+          // Start the animation
+          typingAnimationRef.current = requestAnimationFrame(typeAnimation);
+        }
+      }
     }
 
-    // Cleanup on unmount
+    // Cleanup function
     return () => {
       if (typingAnimationRef.current) {
-        clearTimeout(typingAnimationRef.current);
+        cancelAnimationFrame(typingAnimationRef.current);
       }
     };
-  }, [messages, isTyping, typedText, typingMessageIndex]);
+  }, [messages, typingMessageIndex, typedText]);
 
   // Function to get Twilio token from backend
   async function getToken() {

@@ -75,6 +75,11 @@ const KnowledgeBaseDialog = ({
 
   // Function to track edits from any child component
   const trackEdit = (tabName, editDetail) => {
+    // Reset training complete state if user starts editing after training was complete
+    if (trainingComplete) {
+      setTrainingComplete(false);
+    }
+
     // Check if this is an actual edit that requires training
     const actualEditTypes = [
       "files_upload_complete",
@@ -93,11 +98,6 @@ const KnowledgeBaseDialog = ({
       "faq_field_update",
       "faq_item_deleted",
     ];
-
-    // Reset training complete state only if user makes actual edits after training was complete
-    if (trainingComplete && actualEditTypes.includes(editDetail.type)) {
-      setTrainingComplete(false);
-    }
 
     if (actualEditTypes.includes(editDetail.type)) {
       setTrainingNeeded(true);

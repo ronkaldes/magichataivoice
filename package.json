@@ -9,7 +9,7 @@
     "build:next": "npm run build --workspace=intervo-frontend",
     "build:cloudflare": "npm run build:next && cd packages/intervo-frontend && npx @cloudflare/next-on-pages@1",
     "dev:widget": "npm run dev --workspace=intervo-widget",
-    "build:widget": "VITE_API_URL_PRODUCTION=${VITE_API_URL_PRODUCTION:-https://api.intervo.ai} npm run build --workspace=intervo-widget",
+    "build:widget": "npm run build --workspace=intervo-widget",
     "publish:widget:ci": "npm run build:widget && npx changeset publish"
   },
   "devDependencies": {

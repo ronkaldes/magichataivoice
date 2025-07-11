@@ -53,12 +53,16 @@ async function createAzureSpeechRecognizeStream({
   timer, 
   ws, 
   wss, 
+  agentRooms, // The agent rooms map for room-specific broadcasting
   ignoreNewTranscriptions, 
   isProcessingTTS, 
   processTranscription, 
   resetInactivityTimeout, 
   inactivityTimeout, 
-  endPointingMs
+  endPointingMs,
+  userInterrupted,
+  agentConfig={},
+  applyLexicalEnhancementPostProcessing
 }) {
 
   console.log("azure speech recognize stream");
@@ -88,6 +92,10 @@ async function createAzureSpeechRecognizeStream({
       const speechConfig = sdk.SpeechConfig.fromSubscription(azureKey, azureRegion);
       speechConfig.speechRecognitionLanguage = "en-US";
       
+      // Enable interim results for interruption detection (equivalent to Google's interimResults: true)
+      speechConfig.setProperty(sdk.PropertyId.SpeechServiceConnection_EnableAudioLogging, "false");
+      speechConfig.requestWordLevelTimestamps = true;
+      
       // Set segmentation silence timeout if provided
       const silenceTimeout = endPointingMs !== undefined ? endPointingMs : 800;
       speechConfig.setProperty(sdk.PropertyId.SpeechServiceConnection_SegmentationSilenceTimeoutMs, String(silenceTimeout));
@@ -101,13 +109,35 @@ async function createAzureSpeechRecognizeStream({
       // Create the recognizer
       recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
 
-      // --- Phrase list boosting --- 
+      // --- Dynamic Phrase list boosting with lexical enhancement --- 
       const phraseList = sdk.PhraseListGrammar.fromRecognizer(recognizer);
+      
+      // Add default phrases
       phraseList.addPhrase("CodeDesign");
       phraseList.addPhrase("CodeDesign.ai");
       phraseList.addPhrase("Intervo");
       phraseList.addPhrase("Intervo.ai");
-      // Add other relevant phrases if needed
+      
+      // Add lexical enhancement terms if available and enabled
+      if (agentConfig?.interactionSettings?.lexicalEnhancement?.enabled && 
+          agentConfig?.interactionSettings?.lexicalEnhancement?.terms?.length > 0) {
+        agentConfig.interactionSettings.lexicalEnhancement.terms.forEach(term => {
+          if (term.word) {
+            phraseList.addPhrase(term.word);
+            // Also add pronunciation as an alternative if it's different from the word
+            if (term.pronunciation && term.pronunciation !== term.word) {
+              phraseList.addPhrase(term.pronunciation);
+              
+              // Add common pronunciation variants
+              const pronunciation = term.pronunciation.toLowerCase();
+              if (pronunciation.includes('-')) {
+                phraseList.addPhrase(pronunciation.replace(/-/g, ' '));
+                phraseList.addPhrase(pronunciation.replace(/-/g, ''));
+              }
+            }
+          }
+        });
+      }
       // --- End Phrase list --- 
 
       // --- Event Handlers --- 
@@ -116,40 +146,52 @@ async function createAzureSpeechRecognizeStream({
       recognizer.recognized = async (s, e) => {
         console.log(`[${timer()}] Azure RECOGNIZED: ResultReason=${sdk.ResultReason[e.result.reason]} Text="${e.result.text}"`);
         if (e.result.reason === sdk.ResultReason.RecognizedSpeech && e.result.text) {
-          if (ignoreNewTranscriptions || isProcessingTTS || isPaused) {
-            console.log(`[${timer()}] Ignoring Azure transcript (processing, TTS, or paused)`);
+          if (isProcessingTTS || isPaused) {
+            console.log(`[${timer()}] Ignoring Azure transcript (TTS or paused)`);
             return;
           }
           const transcription = e.result.text;
           
-          // Send to UI clients
-          wss.clients.forEach((client) => {
-            if (client.readyState === WebSocket.OPEN && client !== ws) {
-              client.send(JSON.stringify({ event: "transcription", source: "user", text: transcription }));
-            }
-          });
+          // Apply lexical enhancement post-processing to fix common confusions
+          const processedTranscription = applyLexicalEnhancementPostProcessing ? 
+            applyLexicalEnhancementPostProcessing(transcription, agentConfig?.interactionSettings) : 
+            transcription;
+          
+          // Send processed transcription to room-specific clients only
+          if (ws.roomKey && agentRooms && agentRooms.has(ws.roomKey)) {
+            const room = agentRooms.get(ws.roomKey);
+            room.forEach((client) => {
+              if (client.readyState === WebSocket.OPEN && client !== ws) {
+                client.send(JSON.stringify({ event: "transcription", source: "user", text: processedTranscription }));
+              }
+            });
+          }
 
           clearTimeout(inactivityTimeout); // Clear timer on final result
-          await processTranscription(transcription);
+          await processTranscription(processedTranscription);
         } else if (e.result.reason === sdk.ResultReason.NoMatch) {
           console.log(`[${timer()}] Azure NOMATCH: Speech could not be recognized.`);
         }
       };
 
-      // Handle interim results (optional, currently just logging)
+      // Handle interim results for interruption detection (equivalent to Google's interim results)
       recognizer.recognizing = (s, e) => {
-        // console.log(`[${timer()}] Azure RECOGNIZING: Text="${e.result.text}"`);
-        if (e.result.text && !ignoreNewTranscriptions && !isProcessingTTS && !isPaused) {
-            // Optional: Can uncomment broadcasting if partial results are desired for UI
-            /*
-            wss.clients.forEach((client) => {
-               if (client.readyState === WebSocket.OPEN && client !== ws) {
-                   client.send(JSON.stringify({ event: "transcription", source: "user", text: e.result.text, isPartial: true }));
-               }
-            });
-            resetInactivityTimeout(e.result.text); // Reset timer on partial result
-            */
+        console.log(`[${timer()}] Azure RECOGNIZING: Text="${e.result.text}"`);
+        
+        // Skip empty transcriptions
+        if (!e.result.text || !e.result.text.trim()) return;
+        
+        // If we're currently processing TTS, set interruption flag
+        if (e.result.text.trim()) {
+          console.log(`[${timer()}] User interruption detected during TTS: ${e.result.text}`);
+          if (userInterrupted) {
+            userInterrupted.value = true;
+          }
+          return; // Don't process interim results further
         }
+        
+        // For debugging - log interim results but don't process them
+        console.log(`[${timer()}] Azure interim result: "${e.result.text}"`);
       };
 
       // Handle cancellation

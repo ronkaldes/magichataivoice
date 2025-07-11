@@ -17,14 +17,15 @@ class KnowledgebaseQueryService {
    * @returns {Promise<Object>} Promise resolving to { answer: string, sources: Array }
    */
   async queryKnowledgebase({ query, agentName, sources, conversationHistory = "", config = {} }) {
-    console.log("making api call to knowledgebase", query, agentName, sources, config)
 
     const systemPrompt = `
     You are a helpful AI assistant answering questions during a phone call, using only the provided knowledge base context.
     Keep your answers concise and directly relevant to the user's question.
     Focus on providing the key information needed without extra details. This is for a phone conversation, so keep your answers short and to the point (1-2 sentences preferably). Be friendly as well.
     Do not include links or mention that you are using a knowledge base. Just provide the answer naturally as part of the conversation.
-    You can include any follow up questions in your response if required after sharing the data.`
+    You can include any follow up questions in your response if required after sharing the data.
+    If you do not have the information, do not make up information. Just say you don't know.
+    `
     try {
       // Match the Python service's config structure
       const llmConfig = {
@@ -49,7 +50,6 @@ class KnowledgebaseQueryService {
       });
 
       const responseData = response.data;
-      console.log("responseData from knowledge retriever", responseData)
       // The     response should already be in the correct format { answer, sources }
       return response.data.answer;
     } catch (error) {

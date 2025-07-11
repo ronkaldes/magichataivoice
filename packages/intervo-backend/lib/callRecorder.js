@@ -14,7 +14,7 @@ const COALESCE_GAP_MS = 150; // Max gap between chunks to consider them consecut
 
 class CallRecorder {
     constructor(baseFilename, agentId, recordingsDir = null) {
-        console.log("[CallRecorder] Constructor called. Base filename:", baseFilename, "Agent ID:", agentId);
+        // console.log("[CallRecorder] Constructor called. Base filename:", baseFilename, "Agent ID:", agentId);
         if (!baseFilename) {
             console.error("[CallRecorder] ERROR: Base filename is required.");
             throw new Error("CallRecorder requires a base filename.");
@@ -59,13 +59,13 @@ class CallRecorder {
                     },
                     forcePathStyle: true, // Important for S3-compatible storage
                 });
-                console.log(`[CallRecorder] S3 Upload configured for bucket: ${this.uploadBucket}`);
+                // console.log(`[CallRecorder] S3 Upload configured for bucket: ${this.uploadBucket}`);
             } catch (s3Error) {
                  console.error("[CallRecorder] ERROR initializing S3 client:", s3Error);
                  this.s3Client = null; // Ensure it's null if init fails
             }
         } else {
-            console.log("[CallRecorder] S3 environment variables not fully configured. Upload will be skipped.");
+            // console.log("[CallRecorder] S3 environment variables not fully configured. Upload will be skipped.");
         }
         // --- End S3 Client Initialization ---
     }
@@ -74,7 +74,7 @@ class CallRecorder {
         try {
             if (!fs.existsSync(dirPath)) {
                 fs.mkdirSync(dirPath, { recursive: true });
-                console.log(`[CallRecorder] Created directory: ${dirPath}`);
+                // console.log(`[CallRecorder] Created directory: ${dirPath}`);
             }
         } catch (error) {
              console.error(`[CallRecorder] ERROR creating directory ${dirPath}:`, error);
@@ -84,7 +84,7 @@ class CallRecorder {
 
     _cleanupExistingFinalFile() {
         if (fs.existsSync(this.finalMixedPath)) {
-             console.log(`[CallRecorder] Deleting existing final file: ${this.finalMixedPath}`);
+             // console.log(`[CallRecorder] Deleting existing final file: ${this.finalMixedPath}`);
             try {
                 fs.unlinkSync(this.finalMixedPath);
             } catch (err) {
@@ -94,10 +94,10 @@ class CallRecorder {
     }
 
     async startRecording() {
-        console.log("[CallRecorder] Attempting to start recording...");
+        // console.log("[CallRecorder] Attempting to start recording...");
         try {
             this.callStartTime = Date.now();
-            console.log(`[CallRecorder] Call start time set: ${this.callStartTime} (Timestamp: ${new Date(this.callStartTime).toISOString()})`);
+            // console.log(`[CallRecorder] Call start time set: ${this.callStartTime} (Timestamp: ${new Date(this.callStartTime).toISOString()})`);
             this.incomingChunks = [];
             this.outgoingChunks = [];
 
@@ -108,14 +108,14 @@ class CallRecorder {
             const tempDirPrefix = path.join(this.recordingsDir, `_temp_${this.baseFilename}_`);
             try {
                 this.tempDir = await fs.promises.mkdtemp(tempDirPrefix);
-                console.log(`[CallRecorder] Created temporary directory: ${this.tempDir}`);
+                // console.log(`[CallRecorder] Created temporary directory: ${this.tempDir}`);
             } catch (mkdtempError) {
                  console.error(`[CallRecorder] ERROR creating temporary directory (prefix ${tempDirPrefix}). Check permissions for ${this.recordingsDir}.`);
                  throw mkdtempError;
             }
 
             this.isRecording = true;
-            console.log(`[CallRecorder] Successfully started timestamp-based recording. Temp Dir: ${this.tempDir}`);
+            // console.log(`[CallRecorder] Successfully started timestamp-based recording. Temp Dir: ${this.tempDir}`);
 
         } catch (error) {
             console.error('[CallRecorder] ERROR in startRecording:', error);
@@ -130,13 +130,13 @@ class CallRecorder {
         if (this.isRecording && audioChunk && audioChunk.length > 0 && !this.isIncomingPaused) {
             // --- Add Detailed Log ---
             const timeSinceStart = this.callStartTime ? ((now - this.callStartTime) / 1000).toFixed(2) : 'N/A';
-            // console.log(`[Recorder IN] Time: ${timeSinceStart}s, Size: ${audioChunk.length} bytes`);
+            // // console.log(`[Recorder IN] Time: ${timeSinceStart}s, Size: ${audioChunk.length} bytes`);
             // --- End Log ---
             this.incomingChunks.push({ timestamp: now, chunk: audioChunk });
         } else if (this.isRecording && audioChunk && audioChunk.length === 0) {
              // Log zero-length chunks specifically
              const timeSinceStart = this.callStartTime ? ((now - this.callStartTime) / 1000).toFixed(2) : 'N/A';
-            //  console.log(`[Recorder IN] Time: ${timeSinceStart}s, Received ZERO-LENGTH chunk`);
+            //  // console.log(`[Recorder IN] Time: ${timeSinceStart}s, Received ZERO-LENGTH chunk`);
         } else if (!this.isRecording) {
              // console.warn("[CallRecorder] WARNING: Tried to record incoming chunk while not recording."); // Keep this less verbose maybe
         }
@@ -147,13 +147,13 @@ class CallRecorder {
         if (this.isRecording && audioChunk && audioChunk.length > 0) {
              // --- Add Detailed Log ---
              const timeSinceStart = this.callStartTime ? ((now - this.callStartTime) / 1000).toFixed(2) : 'N/A';
-            //  console.log(`[Recorder OUT] Time: ${timeSinceStart}s, Size: ${audioChunk.length} bytes`);
+            //  // console.log(`[Recorder OUT] Time: ${timeSinceStart}s, Size: ${audioChunk.length} bytes`);
              // --- End Log ---
             this.outgoingChunks.push({ timestamp: now, chunk: audioChunk });
         } else if (this.isRecording && audioChunk && audioChunk.length === 0) {
              // Log zero-length chunks specifically
              const timeSinceStart = this.callStartTime ? ((now - this.callStartTime) / 1000).toFixed(2) : 'N/A';
-            //  console.log(`[Recorder OUT] Time: ${timeSinceStart}s, Received ZERO-LENGTH chunk`);
+            //  // console.log(`[Recorder OUT] Time: ${timeSinceStart}s, Received ZERO-LENGTH chunk`);
         } else if (!this.isRecording) {
              // console.warn("[CallRecorder] WARNING: Tried to record outgoing chunk while not recording."); // Keep this less verbose maybe
         }
@@ -161,12 +161,12 @@ class CallRecorder {
 
     // --- Methods to control incoming pause state ---
     pauseIncoming() {
-        console.log("[CallRecorder] Pausing incoming audio recording.");
+        // console.log("[CallRecorder] Pausing incoming audio recording.");
         this.isIncomingPaused = true;
     }
 
     resumeIncoming() {
-        console.log("[CallRecorder] Resuming incoming audio recording.");
+        // console.log("[CallRecorder] Resuming incoming audio recording.");
         this.isIncomingPaused = false;
     }
 
@@ -192,7 +192,7 @@ class CallRecorder {
              maxEndTimeMs = Math.max(maxEndTimeMs, calculateChunkEndTime(chunk));
         });
 
-        console.log(`[CallRecorder] Calculated Max Audio End Time: ${maxEndTimeMs.toFixed(2)} ms`);
+        // console.log(`[CallRecorder] Calculated Max Audio End Time: ${maxEndTimeMs.toFixed(2)} ms`);
         return maxEndTimeMs;
     }
 
@@ -202,7 +202,7 @@ class CallRecorder {
      * @returns {Promise<{url: string|null, durationSeconds: number}>} Resolves with S3 URL and duration, or null URL if upload fails/skipped.
      */
     async stopAndMix(deleteTempFiles = true) {
-        console.log("[CallRecorder] Attempting to stop and mix...");
+        // console.log("[CallRecorder] Attempting to stop and mix...");
         if (!this.isRecording && this.incomingChunks.length === 0 && this.outgoingChunks.length === 0) {
             console.warn("[CallRecorder] stopAndMix called but not recording and no chunks recorded.");
             return Promise.reject(new Error("No recording data to process."));
@@ -225,7 +225,7 @@ class CallRecorder {
         const actualDurationSeconds = parseFloat((actualAudioEndTimeMs / 1000).toFixed(3)); // Keep precision
 
         const totalDurationSeconds = (this.callEndTime - this.callStartTime) / 1000; // Keep for logging/silent case if needed
-        console.log(`[CallRecorder] Recording stopped. Total processing duration: ${totalDurationSeconds.toFixed(2)}s. Actual audio duration: ${actualDurationSeconds}s`);
+        // console.log(`[CallRecorder] Recording stopped. Total processing duration: ${totalDurationSeconds.toFixed(2)}s. Actual audio duration: ${actualDurationSeconds}s`);
 
          // Handle case where no actual audio was recorded early
          if (this.incomingChunks.length === 0 && this.outgoingChunks.length === 0) {
@@ -239,13 +239,13 @@ class CallRecorder {
 
         try {
             // --- Step 1: Coalesce and Write Temp Files ---
-            console.log("[CallRecorder] Step 1: Coalescing and writing temporary chunk files...");
+            // console.log("[CallRecorder] Step 1: Coalescing and writing temporary chunk files...");
             const incomingFiles = await this._writeCoalescedChunks(this.incomingChunks, 'in');
             const outgoingFiles = await this._writeCoalescedChunks(this.outgoingChunks, 'out');
-            console.log(`[CallRecorder] Wrote ${incomingFiles.length} coalesced incoming files.`);
-            console.log(`[CallRecorder] DEBUG: Incoming file details:`, JSON.stringify(incomingFiles));
-            console.log(`[CallRecorder] Wrote ${outgoingFiles.length} coalesced outgoing files.`);
-            console.log(`[CallRecorder] DEBUG: Outgoing file details:`, JSON.stringify(outgoingFiles));
+            // console.log(`[CallRecorder] Wrote ${incomingFiles.length} coalesced incoming files.`);
+            // console.log(`[CallRecorder] DEBUG: Incoming file details:`, JSON.stringify(incomingFiles));
+            // console.log(`[CallRecorder] Wrote ${outgoingFiles.length} coalesced outgoing files.`);
+            // console.log(`[CallRecorder] DEBUG: Outgoing file details:`, JSON.stringify(outgoingFiles));
 
              // Check if coalesced files exist (could be empty chunks were recorded)
              if (incomingFiles.length === 0 && outgoingFiles.length === 0) {
@@ -256,27 +256,27 @@ class CallRecorder {
              }
 
             // --- Step 2: Mix Audio Locally ---
-             console.log("[CallRecorder] Step 2: Constructing and running ffmpeg command..."); // Removed strategy mention
+             // console.log("[CallRecorder] Step 2: Constructing and running ffmpeg command..."); // Removed strategy mention
              const ffmpegCommand = this._buildRevisedFiltergraphCommand(incomingFiles, outgoingFiles, totalDurationSeconds); // Pass totalDuration for silent case only
              await this._runFFmpegCommand(ffmpegCommand, "ffmpeg revised filtergraph mix");
-             console.log(`[CallRecorder] Successfully mixed audio locally to: ${this.finalMixedPath}`);
+             // console.log(`[CallRecorder] Successfully mixed audio locally to: ${this.finalMixedPath}`);
 
 
             // --- Step 3: Upload to S3 (if configured) ---
             if (this.s3Client && this.uploadBucket) {
-                console.log("[CallRecorder] Step 3: Attempting to upload to S3...");
+                // console.log("[CallRecorder] Step 3: Attempting to upload to S3...");
                 const fileStream = fs.createReadStream(this.finalMixedPath);
                 const objectKey = this.agentId ? `recordings/${this.agentId}/${this.baseFilename}.mp3` : `recordings/${this.baseFilename}.mp3`;
-                console.log(`[CallRecorder] Using S3 object key: ${objectKey}`);
+                // console.log(`[CallRecorder] Using S3 object key: ${objectKey}`);
                 const putObjectParams = { Bucket: this.uploadBucket, Key: objectKey, Body: fileStream, ContentType: 'audio/mpeg' };
                 try {
                     const command = new PutObjectCommand(putObjectParams);
                     await this.s3Client.send(command);
                     finalResultUrl = `${this.s3Endpoint}/${this.uploadBucket}/${objectKey}`;
-                    console.log(`[CallRecorder] Successfully uploaded recording to ${finalResultUrl}`);
+                    // console.log(`[CallRecorder] Successfully uploaded recording to ${finalResultUrl}`);
                     try {
                         await fs.promises.unlink(this.finalMixedPath);
-                        console.log(`[CallRecorder] Deleted local mixed file: ${this.finalMixedPath}`);
+                        // console.log(`[CallRecorder] Deleted local mixed file: ${this.finalMixedPath}`);
                     } catch (unlinkErr) {
                         console.error(`[CallRecorder] WARNING: Failed to delete local mixed file ${this.finalMixedPath} after upload:`, unlinkErr);
                     }
@@ -286,7 +286,7 @@ class CallRecorder {
                     finalResultUrl = null;
                 }
             } else {
-                 console.log("[CallRecorder] S3 upload skipped (not configured).");
+                 // console.log("[CallRecorder] S3 upload skipped (not configured).");
                  finalResultUrl = null;
                  keepLocalFileOnError = true;
             }
@@ -300,14 +300,14 @@ class CallRecorder {
             keepLocalFileOnError = true;
             throw new Error(`Mixing/Processing failed. Check logs. Original error: ${error.message}`);
         } finally {
-            console.log("[CallRecorder] Entering stopAndMix finally block for cleanup.");
+            // console.log("[CallRecorder] Entering stopAndMix finally block for cleanup.");
             if (deleteTempFiles) {
                 await this._cleanupTempDir();
             } else if (this.tempDir) {
-                console.log(`[CallRecorder] Skipping cleanup of temporary directory (deleteTempFiles=false): ${this.tempDir}`);
+                // console.log(`[CallRecorder] Skipping cleanup of temporary directory (deleteTempFiles=false): ${this.tempDir}`);
             }
              if (keepLocalFileOnError && fs.existsSync(this.finalMixedPath)) {
-                console.log(`[CallRecorder] Keeping local mixed file due to error or skipped upload: ${this.finalMixedPath}`);
+                // console.log(`[CallRecorder] Keeping local mixed file due to error or skipped upload: ${this.finalMixedPath}`);
             }
         }
     }
@@ -338,7 +338,7 @@ class CallRecorder {
                 currentBuffer = chunkData.chunk;
                 currentStartTime = chunkStartTime;
                 lastChunkEndTime = chunkStartTime + (chunkData.chunk.length / (SAMPLE_RATE / 1000));
-                 console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Starting new buffer for ${streamType}. First chunk timestamp: ${chunkStartTime} (Relative: ${Math.max(0, chunkStartTime - this.callStartTime)}ms)`);
+                 // console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Starting new buffer for ${streamType}. First chunk timestamp: ${chunkStartTime} (Relative: ${Math.max(0, chunkStartTime - this.callStartTime)}ms)`);
             } else {
                 // Check gap since the end of the last chunk in the current buffer
                 const gap = chunkStartTime - lastChunkEndTime;
@@ -356,13 +356,13 @@ class CallRecorder {
                         filePath: filePath,
                         startTimeMs: calculatedStartTimeMs
                     });
-                     console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Wrote coalesced file ${filePath}. StartTimeMs: ${calculatedStartTimeMs}ms. Gap was ${gap}ms.`);
+                     // console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Wrote coalesced file ${filePath}. StartTimeMs: ${calculatedStartTimeMs}ms. Gap was ${gap}ms.`);
 
                     // Start new buffer
                     currentBuffer = chunkData.chunk;
                     currentStartTime = chunkStartTime;
                     lastChunkEndTime = chunkStartTime + (chunkData.chunk.length / (SAMPLE_RATE / 1000));
-                     console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Starting new buffer for ${streamType} after gap. First chunk timestamp: ${chunkStartTime} (Relative: ${Math.max(0, chunkStartTime - this.callStartTime)}ms)`);
+                     // console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Starting new buffer for ${streamType} after gap. First chunk timestamp: ${chunkStartTime} (Relative: ${Math.max(0, chunkStartTime - this.callStartTime)}ms)`);
                 }
             }
         }
@@ -376,7 +376,7 @@ class CallRecorder {
                 filePath: filePath,
                 startTimeMs: calculatedStartTimeMs
              });
-              console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Wrote FINAL coalesced file ${filePath}. StartTimeMs: ${calculatedStartTimeMs}ms.`);
+              // console.log(`[CallRecorder DEBUG _writeCoalescedChunks] Wrote FINAL coalesced file ${filePath}. StartTimeMs: ${calculatedStartTimeMs}ms.`);
         }
 
         return coalescedFiles;
@@ -425,7 +425,7 @@ class CallRecorder {
                  '-q:a 2',
                  '-y', `"${this.finalMixedPath}"`
             ].join(' ');
-            console.log("[CallRecorder] Generated silent ffmpeg command:", command);
+            // console.log("[CallRecorder] Generated silent ffmpeg command:", command);
              return command;
         }
 
@@ -447,32 +447,30 @@ class CallRecorder {
             `"${this.finalMixedPath}"`
         ].join(' ');
 
-        console.log("[CallRecorder] Generated revised ffmpeg command (duration=longest):", command);
+        // console.log("[CallRecorder] Generated revised ffmpeg command (duration=longest):", command);
         if (process.env.DEBUG_FFMPEG_COMMAND) {
-            console.log("[CallRecorder DEBUG] Full revised ffmpeg command (duration=longest):", command);
+            // console.log("[CallRecorder DEBUG] Full revised ffmpeg command (duration=longest):", command);
         }
         return command;
     }
 
 
     async _runFFmpegCommand(command, stepName) {
-         console.log(`[CallRecorder] Running ${stepName}... (command length: ${command.length})`);
+         // console.log(`[CallRecorder] Running ${stepName}... (command length: ${command.length})`);
          // Avoid logging extremely long commands unless debugging
-         // if (process.env.DEBUG_FFMPEG_COMMAND) console.log(command); // Command is logged before calling now
+         // if (process.env.DEBUG_FFMPEG_COMMAND) // console.log(command); // Command is logged before calling now
           try {
               const { stdout, stderr } = await execPromise(command, { timeout: 300000, maxBuffer: 10 * 1024 * 1024 }); // 5 min timeout, 10MB buffer for stdio
               // Log stderr verbosely during debugging
               if (stderr) {
                  if (process.env.VERBOSE_FFMPEG || process.env.DEBUG_FFMPEG_COMMAND) { // Log if verbose or debug flags set
-                      console.log(`[CallRecorder] ${stepName} stderr (Success):
-${stderr}`);
+                      // console.log(`[CallRecorder] ${stepName} stderr (Success):${stderr}`);
                  } else {
-                      console.log(`[CallRecorder] ${stepName} completed with stderr output (set VERBOSE_FFMPEG=true to view).`);
+                      // console.log(`[CallRecorder] ${stepName} completed with stderr output (set VERBOSE_FFMPEG=true to view).`);
                  }
               }
-              if (stdout && process.env.VERBOSE_FFMPEG) console.log(`[CallRecorder] ${stepName} stdout (Success):
-${stdout}`);
-              console.log(`[CallRecorder] ${stepName} completed successfully.`);
+              if (stdout && process.env.VERBOSE_FFMPEG) // console.log(`[CallRecorder] ${stepName} stdout (Success):${stdout}`);
+              // console.log(`[CallRecorder] ${stepName} completed successfully.`);
               return { stdout, stderr };
           } catch (error) {
               console.error(`[CallRecorder] ERROR during ${stepName}.`);
@@ -490,10 +488,10 @@ ${stdout}`);
 
     async _cleanupTempDir() {
         if (this.tempDir && fs.existsSync(this.tempDir)) {
-            console.log(`[CallRecorder] Cleaning up temporary directory: ${this.tempDir}`);
+            // console.log(`[CallRecorder] Cleaning up temporary directory: ${this.tempDir}`);
             try {
                  await fs.promises.rm(this.tempDir, { recursive: true, force: true, maxRetries: 3 });
-                console.log(`[CallRecorder] Temporary directory cleaned up.`);
+                // console.log(`[CallRecorder] Temporary directory cleaned up.`);
             } catch (err) {
                 console.error(`[CallRecorder] WARNING: Error cleaning up temporary directory ${this.tempDir}:`, err);
             } finally {

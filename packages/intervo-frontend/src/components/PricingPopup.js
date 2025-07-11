@@ -103,7 +103,7 @@ const PricingPopup = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 p-4 pt-8">
       <div
         className="bg-white rounded-[20px] w-fit relative"
         style={{ height: "fit-content" }}

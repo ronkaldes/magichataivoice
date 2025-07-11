@@ -51,7 +51,7 @@ class ConversationLogger {
       await fs.appendFile(this.currentLogFile, logLine);
 
       // Also log to console for real-time monitoring
-      console.log(`[LOG-${this.logCounter}] ${data.type}:`, JSON.stringify(data, null, 2));
+      // console.log(`[LOG-${this.logCounter}] ${data.type}:`, JSON.stringify(data, null, 2));
 
     } catch (error) {
       console.error('Failed to write log entry:', error);

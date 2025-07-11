@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -10,6 +17,8 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 
 const AgentSettings = ({ agentData = {}, onSave }) => {
   // Local state to track form values
@@ -32,6 +41,18 @@ const AgentSettings = ({ agentData = {}, onSave }) => {
     [onSave]
   );
 
+  const handlePolicyChange = (field, value) => {
+    const newSettings = {
+      ...localSettings,
+      policies: {
+        ...localSettings.policies,
+        [field]: value,
+      },
+    };
+    setLocalSettings(newSettings);
+    debouncedSave("policies", newSettings.policies);
+  };
+
   const handleLLMChange = (field, value) => {
     const newSettings = {
       ...localSettings,
@@ -44,30 +65,135 @@ const AgentSettings = ({ agentData = {}, onSave }) => {
     debouncedSave("llm", newSettings.llm);
   };
 
+  const [parametersText, setParametersText] = useState(
+    localSettings?.llm?.parameters
+      ? JSON.stringify(localSettings.llm.parameters, null, 2)
+      : ""
+  );
+
+  useEffect(() => {
+    setParametersText(
+      localSettings?.llm?.parameters
+        ? JSON.stringify(localSettings.llm.parameters, null, 2)
+        : ""
+    );
+  }, [localSettings?.llm?.parameters]);
+
+  const handleLLMParametersChange = (text) => {
+    setParametersText(text);
+    try {
+      const parsed = JSON.parse(text);
+      const newSettings = {
+        ...localSettings,
+        llm: {
+          ...localSettings.llm,
+          parameters: parsed,
+        },
+      };
+      setLocalSettings(newSettings);
+      debouncedSave("llm", newSettings.llm);
+    } catch (error) {
+      // Allow invalid JSON while typing
+      console.log("Invalid JSON - waiting for valid input");
+    }
+  };
+
   return (
-    <div className="w-full">
-      <Card className="border-none shadow-none bg-gray-50">
-        <CardContent className="p-4">
-          <div className="space-y-2">
-            <Label>LLM Provider</Label>
-            <Select
-              value={localSettings?.llm?.provider || ""}
-              onValueChange={(value) => handleLLMChange("provider", value)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select LLM Provider" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="llama">Fast Response (LLaMa)</SelectItem>
-                <SelectItem value="premium">
-                  Better Response (Gemini, OpenAI)
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
+    <Accordion
+      type="multiple"
+      defaultValue={["policies", "llm"]}
+      className="w-full"
+    >
+      {/* Policies */}
+      <AccordionItem value="policies">
+        <AccordionTrigger className="text-l font-semibold">
+          Policies
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-2">
+          <Card className="border-none shadow-none bg-gray-50">
+            <CardContent className="p-4">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="policy_tone"
+                    checked={localSettings?.policies?.tone === "friendly"}
+                    onCheckedChange={(checked) =>
+                      handlePolicyChange(
+                        "tone",
+                        checked ? "friendly" : "neutral"
+                      )
+                    }
+                  />
+                  <Label htmlFor="policy_tone">Friendly Tone</Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="policy_language"
+                    checked={localSettings?.policies?.language === "en-US"}
+                    onCheckedChange={(checked) =>
+                      handlePolicyChange("language", checked ? "en-US" : "en")
+                    }
+                  />
+                  <Label htmlFor="policy_language">
+                    Language: English (US)
+                  </Label>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </AccordionContent>
+      </AccordionItem>
+
+      {/* LLM Settings */}
+      <AccordionItem value="llm">
+        <AccordionTrigger className="text-l font-semibold">
+          LLM Settings
+        </AccordionTrigger>
+        <AccordionContent className="space-y-4 pt-2">
+          <Card className="border-none shadow-none bg-gray-50">
+            <CardContent className="p-4">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <Label>LLM Provider</Label>
+                  <Select
+                    value={localSettings?.llm?.provider || ""}
+                    onValueChange={(value) =>
+                      handleLLMChange("provider", value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select LLM Provider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="openai">OpenAI</SelectItem>
+                      <SelectItem value="groq">Groq</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="llm_model">LLM Model</Label>
+                  <Input
+                    id="llm_model"
+                    value={localSettings?.llm?.model || ""}
+                    onChange={(e) => handleLLMChange("model", e.target.value)}
+                    placeholder="e.g., GPT-4"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="llm_parameters">LLM Parameters</Label>
+                  <Textarea
+                    id="llm_parameters"
+                    value={parametersText}
+                    onChange={(e) => handleLLMParametersChange(e.target.value)}
+                    placeholder='{ "temperature": 0.7 }'
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
 

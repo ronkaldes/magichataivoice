@@ -29,6 +29,14 @@ class BaseAgent {
     
     // Add business context from kbArtifacts
     this.kbArtifacts = config.kbArtifacts || null;
+    
+    // Tools support - will be injected by OrchestrationManager
+    this.toolManager = null;
+    
+    // Workflow node context
+    this.nodeId = null;
+    this.nodeData = null;
+    this.isWorkflowNode = config.settings?.workflowNode || false;
   }
 
   async getAIService() {
@@ -180,6 +188,20 @@ class BaseAgent {
       }
     }
 
+    // Check if we should use tools before generating response
+    let toolResult = null;
+    const shouldUseTools = await this.shouldUseTool(dynamicInput, matchedIntent.name);
+      console.log("should use tools", shouldUseTools, "kbRequired", kbRequired);
+    if (shouldUseTools && !kbRequired) {
+      try {
+        toolResult = await this.selectAndExecuteTool(matchedIntent.name, dynamicInput);
+        console.log(`Tool execution result for ${this.name}:`, toolResult);
+      } catch (error) {
+        console.error(`Tool execution failed for ${this.name}:`, error);
+        // Continue with normal processing if tool fails
+      }
+    }
+
     const baseResponse = {
       canProcess: true,
       confidence: 0.8,
@@ -190,7 +212,8 @@ class BaseAgent {
       order: 1,
       missingEntities,
       agentName: this.name,
-      knowledgeBase: this.knowledgeBase // Add KB info for logging
+      knowledgeBase: this.knowledgeBase, // Add KB info for logging
+      toolResult: toolResult // Include tool result if available
     };
 
     if (kbRequired) {
@@ -267,6 +290,11 @@ class BaseAgent {
       ? `\nIMPORTANT: This intent requires the following information that we haven't collected yet: ${missingEntities.join(', ')}. Only ask for this information if it's directly relevant to answering the user's current question.\n`
       : '';
 
+    // Add available tools context
+    const availableToolsText = this.toolManager && this.toolManager.getAllTools().length > 0 
+      ? `\nAvailable Tools: You have access to the following tools: ${this.toolManager.getAllTools().map(tool => `${tool.name} (${tool.type})`).join(', ')}. Use these tools when appropriate to handle user requests.`
+      : '';
+
     return `
       Agent Configuration:
       Name: ${this.name}
@@ -288,6 +316,8 @@ class BaseAgent {
 
       ${missingEntitiesText}
 
+      ${availableToolsText}
+
       User Input: "${input}"
 
       Conversation History:
@@ -303,7 +333,7 @@ class BaseAgent {
       - Be helpful and conversational while staying on topic
       - Use the business context to provide accurate information about the company/service you represent
       - If any required info is missing AND needed for this specific request, ask for it naturally within your response
-
+      - IF YOU DO NOT HAVE THE INFORMATION, DO NOT MAKE UP INFORMATION. JUST SAY YOU DON'T KNOW.
       Please respond according to the agent's configuration and current intent.
     `;
   }
@@ -350,6 +380,152 @@ class BaseAgent {
       console.error(`Error executing function ${functionName}:`, error);
       throw error;
     }
+  }
+
+  // Tool-related methods
+  setToolManager(toolManager) {
+    this.toolManager = toolManager;
+  }
+
+  async shouldUseTool(input, intent) {
+    if (!this.toolManager) {
+      console.log(`Agent ${this.name} has no tool manager - cannot use tools`);
+      return false;
+    }
+
+    // Check if we have tools that can handle this intent/input
+    const availableTools = this.toolManager.getToolsForIntent(intent, input);
+    console.log("availableTools", availableTools, this.nodeId);
+    const shouldUse = availableTools.length > 0;
+    
+    if (this.isWorkflowNode) {
+      console.log(`Workflow agent ${this.name} (node ${this.nodeId}): shouldUseTool=${shouldUse}, availableTools=${availableTools.length}`);
+    }
+    
+    return shouldUse;
+  }
+
+  async selectAndExecuteTool(intent, input, params = {}) {
+    if (!this.toolManager) {
+      throw new Error('No tools available - ToolManager not initialized');
+    }
+
+    // Find the best tool for this task
+    const tool = await this.toolManager.selectBestTool(intent, input, { agent: this.name });
+    
+    if (!tool) {
+      throw new Error(`No suitable tool found for intent: ${intent}`);
+    }
+
+    const logPrefix = this.isWorkflowNode ? `Workflow agent ${this.name} (node ${this.nodeId})` : `Agent ${this.name}`;
+    console.log(`${logPrefix} using tool: ${tool.name} (${tool.type})`);
+
+    // Log tool usage if logger is available
+    if (global.orchestrationLogger) {
+      await global.orchestrationLogger.logEntry({
+        type: 'tool_usage',
+        agent: this.name,
+        nodeId: this.nodeId,
+        isWorkflowNode: this.isWorkflowNode,
+        tool: {
+          name: tool.name,
+          type: tool.type,
+          intent: intent
+        },
+        input: input
+      });
+    }
+
+    // Execute the tool
+    return await this.executeTool(tool, intent, input, params);
+  }
+
+  async executeTool(tool, intent, input, params = {}) {
+    // This method determines what operation to call on the tool
+    // based on the intent and input
+    const operation = this.mapIntentToOperation(intent, input, tool.type);
+    
+    try {
+      const result = await tool.execute(operation, params);
+      
+      // Log successful tool execution
+      if (global.orchestrationLogger) {
+        await global.orchestrationLogger.logEntry({
+          type: 'tool_execution_success',
+          agent: this.name,
+          tool: tool.name,
+          operation: operation,
+          result: result
+        });
+      }
+      
+      return result;
+    } catch (error) {
+      // Log tool execution error
+      if (global.orchestrationLogger) {
+        await global.orchestrationLogger.logError('tool_execution_error', error, {
+          agentName: this.name,
+          toolName: tool.name,
+          operation: operation,
+          input: input
+        });
+      }
+      
+      throw error;
+    }
+  }
+
+  mapIntentToOperation(intent, input, toolType) {
+    // Map intents to specific tool operations
+    const inputLower = input.toLowerCase();
+    
+    if (toolType === 'calendly') {
+      if (inputLower.includes('schedule') || inputLower.includes('book')) {
+        return 'list_event_types'; // First step in scheduling
+      }
+      if (inputLower.includes('list') || inputLower.includes('show')) {
+        return 'list_scheduled_events';
+      }
+      if (inputLower.includes('cancel')) {
+        return 'cancel_event';
+      }
+      return 'get_user_info'; // Default
+    }
+    
+    if (toolType === 'google-calendar') {
+      if (inputLower.includes('create') || inputLower.includes('schedule')) {
+        return 'create_event';
+      }
+      if (inputLower.includes('list') || inputLower.includes('show')) {
+        return 'list_events';
+      }
+      return 'list_calendars'; // Default
+    }
+    
+    if (toolType === 'outlook-calendar') {
+      if (inputLower.includes('find time') || inputLower.includes('meeting time')) {
+        return 'find_meeting_times';
+      }
+      if (inputLower.includes('list') || inputLower.includes('show')) {
+        return 'list_events';
+      }
+      return 'get_user_profile'; // Default
+    }
+    
+    return 'default';
+  }
+
+  async hasAvailableTools() {
+    return this.toolManager && this.toolManager.getAllTools().length > 0;
+  }
+
+  async getAvailableToolTypes() {
+    if (!this.toolManager) {
+      return [];
+    }
+    
+    const tools = this.toolManager.getAllTools();
+    return [...new Set(tools.map(tool => tool.type))];
   }
 }
 

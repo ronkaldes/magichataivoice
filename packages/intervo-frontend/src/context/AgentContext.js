@@ -6,7 +6,6 @@ import React, {
   useState,
   useEffect,
   useRef,
-  useCallback,
 } from "react";
 import returnAPIUrl from "@/config/config";
 import { useSource } from "@/context/SourceContext";
@@ -310,32 +309,28 @@ export function PlaygroundProvider({ children }) {
   };
 
   // function to update ai config but sening a PUT request
-  const updateAIConfig = useCallback(
-    async (data, source = "unknown") => {
-      console.log(`updateAIConfig called from ${source}:`, data);
-      if (!state?.aiConfig?._id) return;
-      const response = await fetch(
-        `${backendAPIUrl}/agent/${state?.aiConfig?._id}`,
-        {
-          method: "PUT",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(data),
-        }
-      );
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
+  const updateAIConfig = async (data, source = "unknown") => {
+    console.log(`updateAIConfig called from ${source}:`, data);
+    if (!state?.aiConfig?._id) return;
+    const response = await fetch(
+      `${backendAPIUrl}/agent/${state?.aiConfig?._id}`,
+      {
+        method: "PUT",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(data),
       }
-      const updatedAgent = await response.json();
-      console.log(`updateAIConfig response for ${source}:`, updatedAgent);
-
-      // Update the local context state with the updated data
-      dispatch({ type: "SET_AI_CONFIG", payload: updatedAgent });
-    },
-    [state.aiConfig?._id]
-  );
+    );
+    if (!response.ok) {
+      throw new Error(`Response status: ${response.status}`);
+    }
+    console.log(
+      `updateAIConfig response for ${source}:`,
+      await response.json()
+    );
+  };
 
   const [callConfig, setCallConfig] = useState({
     type: "live",

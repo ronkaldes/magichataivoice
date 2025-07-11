@@ -104,7 +104,8 @@ router.post("/", async (req, res) => {
   }
 
   //Step 1: get the param from aiConfig
-  const { playground, widgetId, contactId, source } = aiConfig;
+  const { playground, widgetId, contactId, source, conversationId } = aiConfig;
+
 
   console.log(aiConfig, "aiConfig");
   let { agentId } = aiConfig;
@@ -187,6 +188,7 @@ router.post("/", async (req, res) => {
     stream.parameter({ name: "activity-id", value: activityId });
     stream.parameter({ name: "contact-id", value: contactId });
     stream.parameter({ name: "source", value: source });
+    stream.parameter({ name: "conversation-id", value: conversationId });
     twiml.pause({ length: 15 });
 
     res.type("text/xml");

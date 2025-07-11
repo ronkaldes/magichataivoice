@@ -1,7 +1,7 @@
 const WebSocket = require("ws");
 const fetch = require("node-fetch");
 
-async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null) {
+async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null, userInterrupted = null) {
   const ELEVENLABS_API_KEY = process.env.ELEVENLABS_API_KEY;
   if (!ELEVENLABS_API_KEY) {
     console.error(`[${new Date().toISOString()}] [ElevenLabs] Missing ELEVENLABS_API_KEY environment variable.`);
@@ -47,7 +47,7 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
           console.error(`[${new Date().toISOString()}] [ElevenLabs] Finalizing with error:`, streamError.message);
           reject(streamError);
         } else {
-          console.log(`[${new Date().toISOString()}] [ElevenLabs] Finished streaming TTS audio (node-fetch stream).`);
+          console.log(`[${new Date().toISOString()}] [ElevenLabs] Finished streaming TTS audio (optimized stream).`);
           if (nearEndCallback && typeof nearEndCallback === "function") {
             try {
               console.log(`[${new Date().toISOString()}] [ElevenLabs] Executing nearEndCallback.`);
@@ -75,6 +75,17 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
     };
 
     const sendNextChunk = () => {
+      // Check for user interruption
+      if (userInterrupted && userInterrupted.value) {
+        console.log(`[${new Date().toISOString()}] [ElevenLabs] User interruption detected, stopping TTS playback`);
+        isSending = false;
+        streamError = new Error("User interrupted TTS playback");
+        chunkQueue = [];
+        streamEnded = true;
+        checkAndFinalize();
+        return;
+      }
+
       if (ws.readyState !== WebSocket.OPEN || streamError) {
         isSending = false;
         streamError = streamError || new Error("WebSocket closed or stream error occurred");
@@ -119,23 +130,26 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
       });
     };
 
-    // --- Direct API Streaming using node-fetch ---
+    // --- Optimized API Streaming using node-fetch with latency optimizations ---
     try {
-      // Define the request payload matching previous working version
+      // Use the optimized request payload with Flash model and all latency optimizations
       const requestPayload = {
         text: text,
-        model_id: "eleven_monolingual_v1",
+        model_id: "eleven_flash_v2_5", // Use Flash model for ~75ms latency
         voice_settings: {
           stability: 0.5,
           similarity_boost: 0.75,
           speaking_rate: 1.2,
           pitch: 0.0
-        }
+        },
+        // Additional latency optimizations
+        apply_text_normalization: "off", // Disable text normalization for Flash models
+        use_pvc_as_ivc: true // Use IVC version instead of PVC for lower latency
       };
 
-      console.log(`[${new Date().toISOString()}] [ElevenLabs] Requesting stream via node-fetch for voice ${voiceId}...`);
+      console.log(`[${new Date().toISOString()}] [ElevenLabs] Requesting optimized stream via Flash v2.5 for voice ${voiceId}...`);
       const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=ulaw_8000&optimize_streaming_latency=0`,
+        `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}/stream?output_format=ulaw_8000&optimize_streaming_latency=4`,
         {
           method: "POST",
           headers: {
@@ -156,6 +170,14 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
 
       // *** CRITICAL: Iterate over response.body (ReadableStream) ***
       for await (const chunk of response.body) {
+        // Check for user interruption
+        if (userInterrupted && userInterrupted.value) {
+          console.log(`[${new Date().toISOString()}] [ElevenLabs] User interruption detected during HTTP stream processing. Aborting.`);
+          streamError = new Error("User interrupted TTS during stream processing");
+          if (response.body.destroy) response.body.destroy();
+          break;
+        }
+
         if (ws.readyState !== WebSocket.OPEN) {
           console.warn(`[${new Date().toISOString()}] [ElevenLabs] WebSocket closed while processing HTTP stream. Aborting.`);
           streamError = new Error("WebSocket closed during stream processing");
@@ -184,6 +206,7 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
     } catch (error) {
       console.error(`[${new Date().toISOString()}] [ElevenLabs] Error during fetch or stream processing:`, error);
       streamError = error;
+      throw error;
     } finally {
       // Mark stream as ended regardless of success or failure
       streamEnded = true;

@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Agent = require("../models/Agent");
 const Voice = require("../models/Voice");
+const Tool = require("../models/Tool");
 const { v4: uuidv4 } = require("uuid");
 const authenticateUser = require("../lib/authMiddleware");
 const User = require("../models/User");
@@ -148,6 +149,120 @@ const generateAgentIntroduction = async (prompt) => {
     console.error("Error generating introduction:", error);
     return '';
   }
+};
+
+/**
+ * Process orchestrationFlow to create Tool records for any tools with credentials
+ * and replace them with toolId references. Also handles tool deletion.
+ */
+const processOrchestrationFlowTools = async (orchestrationFlow, agent, userId) => {
+  if (!orchestrationFlow || !orchestrationFlow.nodes) {
+    console.log("no nodes", orchestrationFlow);
+    return orchestrationFlow;
+  }
+
+  const processedFlow = JSON.parse(JSON.stringify(orchestrationFlow)); // Deep clone
+
+  // Get user workspace info
+  const user = await User.findById(userId).populate("defaultWorkspace").populate("lastActiveWorkspace");
+  const { workspaceId, ownerId } = getWorkspaceAndOwner(user);
+
+  // Get all existing tools for this agent to track deletions
+  const existingTools = await Tool.find({ agent: agent._id, isActive: true });
+  const currentToolIds = new Set();
+
+  for (const node of processedFlow.nodes) {
+    console.log("node found", node.data, node.data?.name);
+    
+    // Check for tools in the settings structure
+    let tools = null;
+    if (node.data && node.data.settings && node.data.settings.tools) {
+      tools = node.data.settings.tools;
+    }
+    
+    if (tools) {
+      console.log("node data found, tools:", tools);
+      const processedTools = [];
+
+      for (const tool of tools) {
+        console.log("tool found", tool);
+        
+        // If tool has a toolId, it's an existing tool - track it
+        if (tool.toolId) {
+          currentToolIds.add(tool.toolId);
+          processedTools.push(tool);
+        }
+        // Check if this tool has credentials (indicating it's a new tool)
+        else if (tool.config && tool.config.apiKey) {
+          try {
+            // Create a Tool record in the database
+            const toolRecord = new Tool({
+              name: tool.name,
+              type: tool.type,
+              serverUrl: tool.serverUrl,
+              user: ownerId,
+              workspace: workspaceId,
+              agent: agent._id,
+              credentials: {
+                apiKey: tool.config.apiKey
+              },
+              configuration: tool.config || {},
+              protocol: 'mcp',
+              createdBy: userId
+            });
+
+            await toolRecord.save();
+            console.log(`Created Tool record with toolId: ${toolRecord.toolId} for agent ${agent._id}`);
+
+            // Track the new tool
+            currentToolIds.add(toolRecord.toolId);
+
+            // Replace the tool with just the reference
+            processedTools.push({
+              toolId: toolRecord.toolId,
+              name: tool.name,
+              type: tool.type,
+              serverUrl: tool.serverUrl,
+              parameters: tool.parameters || {}
+            });
+          } catch (error) {
+            console.error(`Error creating Tool record for ${tool.name}:`, error);
+            // If tool creation fails, keep the original tool but remove credentials
+            const { config, ...toolWithoutCredentials } = tool;
+            processedTools.push(toolWithoutCredentials);
+          }
+        } else {
+          // Tool without credentials or toolId, keep as is
+          processedTools.push(tool);
+        }
+      }
+
+      // Update tools in the correct location
+      if (node.data.settings) {
+        node.data.settings.tools = processedTools;
+      }
+    }
+  }
+
+  // Delete tools that are no longer referenced in the workflow
+  const toolsToDelete = existingTools.filter(tool => !currentToolIds.has(tool.toolId));
+  
+  if (toolsToDelete.length > 0) {
+    console.log(`Deleting ${toolsToDelete.length} unused tools for agent ${agent._id}`);
+    
+    for (const tool of toolsToDelete) {
+      try {
+        // Soft delete by setting isActive to false
+        tool.isActive = false;
+        await tool.save();
+        console.log(`Deleted Tool record with toolId: ${tool.toolId}`);
+      } catch (error) {
+        console.error(`Error deleting Tool record ${tool.toolId}:`, error);
+      }
+    }
+  }
+
+  return processedFlow;
 };
 
 // Apply authentication middleware to all routes
@@ -705,6 +820,13 @@ router.put("/:id", async (req, res) => {
       // Set the flag to indicate workflow needs update when prompt changes
       req.body.workflowNeedsUpdate = true;
       console.log(`Prompt updated for agent ${agent._id}, setting workflowNeedsUpdate flag`);
+    }
+
+    // Handle orchestrationFlow updates with tool creation
+    if (req.body.orchestrationFlow) {
+      console.log("orchestrationFlow", req.body.orchestrationFlow);
+      const processedFlow = await processOrchestrationFlowTools(req.body.orchestrationFlow, agent, req.user.id);
+      req.body.orchestrationFlow = processedFlow;
     }
 
     Object.assign(agent, req.body);

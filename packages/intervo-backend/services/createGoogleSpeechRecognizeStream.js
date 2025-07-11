@@ -12,44 +12,111 @@ function createGoogleSpeechRecognizeStream({
   timer, 
   ws, 
   wss, 
+  agentRooms, // The agent rooms map for room-specific broadcasting
   ignoreNewTranscriptions, 
   isProcessingTTS, 
   processTranscription, 
   resetInactivityTimeout, 
-  inactivityTimeout 
+  inactivityTimeout,
+  userInterrupted,
+  agentConfig={},
+  applyLexicalEnhancementPostProcessing
 }) {
+  const {interactionSettings} = agentConfig;
+
+  // Build speech contexts with default phrases and lexical enhancement terms
+  const defaultPhrases = [
+    "CodeDesign",
+    "CodeDesign.ai",
+    "Intervo.ai",
+    "Intervo",
+    "Manjunath",
+    "Hey",
+    "hai",
+  ];
+
+  // Add lexical enhancement terms if available and enabled
+  const lexicalPhrases = [];
+  const highBoostPhrases = [];
+  
+  if (interactionSettings?.lexicalEnhancement?.enabled && 
+      interactionSettings?.lexicalEnhancement?.terms?.length > 0) {
+    interactionSettings.lexicalEnhancement.terms.forEach(term => {
+      if (term.word) {
+        // Add the main word with high boost to prioritize it
+        highBoostPhrases.push(term.word);
+        
+        // Add pronunciation variants if different from the word
+        if (term.pronunciation && term.pronunciation !== term.word) {
+          highBoostPhrases.push(term.pronunciation);
+          
+          // Generate common pronunciation variants for any pronunciation with separators
+          const phonetic = term.pronunciation.toLowerCase();
+          
+          // Add variants with different separators (hyphens, spaces, no separator)
+          if (phonetic.includes('-')) {
+            lexicalPhrases.push(phonetic.replace(/-/g, ' ')); // Replace hyphens with spaces
+            lexicalPhrases.push(phonetic.replace(/-/g, '')); // Remove hyphens entirely
+          }
+          
+          // Add variants for other common separators
+          if (phonetic.includes('_')) {
+            lexicalPhrases.push(phonetic.replace(/_/g, ' ')); // Replace underscores with spaces
+            lexicalPhrases.push(phonetic.replace(/_/g, '')); // Remove underscores entirely
+          }
+          
+          if (phonetic.includes('.')) {
+            lexicalPhrases.push(phonetic.replace(/\./g, ' ')); // Replace dots with spaces
+            lexicalPhrases.push(phonetic.replace(/\./g, '')); // Remove dots entirely
+          }
+        }
+        
+        // Add company/brand context phrases to strengthen recognition for any term
+        lexicalPhrases.push(term.word + " ai");
+        lexicalPhrases.push(term.word + " dot ai");
+        lexicalPhrases.push(term.word + " platform");
+        lexicalPhrases.push(term.word + " system");
+        lexicalPhrases.push(term.word + " service");
+        lexicalPhrases.push(term.word + " app");
+        lexicalPhrases.push(term.word + " software");
+      }
+    });
+  }
+
+  const allPhrases = [...defaultPhrases, ...lexicalPhrases];
+
   const request = {
     config: {
       encoding: "MULAW",
       sampleRateHertz: 8000,
       languageCode: "en-US",
-      interimResults: false,
       enableAutomaticPunctuation: false,
       useEnhanced: true,
       model: "phone_call",
     },
-    speechContexts: [{
-      phrases: [
-        "CodeDesign",
-        "CodeDesign.ai",
-        "Intervo.ai",
-        "Intervo",
-        "Manjunath",
-        "Hey",
-        "hai",
-      ],
-      boost: 20
-    }],
+    interimResults: true,
+
+    // Use advanced model adaptation instead of basic speechContexts
+    adaptation: highBoostPhrases.length > 0 ? {
+      phraseSets: [{
+        phrases: [
+          ...highBoostPhrases.map(phrase => ({ value: phrase, boost: 20 })),
+          ...lexicalPhrases.map(phrase => ({ value: phrase, boost: 15 }))
+        ]
+      }]
+    } : undefined,
+
+    // Fallback to speechContexts for compatibility
+    speechContexts: highBoostPhrases.length === 0 ? [{
+      phrases: allPhrases,
+      boost: 15
+    }] : [],
   };
   
   console.log("Creating recognize stream");
 
   const recognizeStream = client.streamingRecognize(request)
     .on("data", async (data) => {
-      console.log("Recognize stream data 0 ");
-
-      if (ignoreNewTranscriptions || isProcessingTTS) return;
-      console.log("Recognize stream data", ignoreNewTranscriptions);
 
       if (data.results[0] && data.results[0].alternatives[0]) {
         const transcription = data.results[0].alternatives[0].transcript;
@@ -58,21 +125,39 @@ function createGoogleSpeechRecognizeStream({
         // Skip empty transcriptions
         if (!transcription.trim()) return;
 
+        // If this is an interim result and we're currently processing TTS, set interruption flag
+        if (!isFinal && transcription.trim()) {
+          console.log(`[${timer()}] User interruption detected during TTS: ${transcription}`);
+          userInterrupted.value = true;
+          return; // Don't process interim results further
+        }
+
+        // Only process final results for actual transcription
+        if (!isFinal) {
+          return; // Skip interim results for transcription processing
+        }
+
+        if (ignoreNewTranscriptions || isProcessingTTS) return;
+
         console.log(`[${timer()}] Transcription received: ${transcription}`);
         
-        // Send transcription to clients
-        wss.clients.forEach((client) => {
-          if (client.readyState === WebSocket.OPEN && client !== ws) {
-            client.send(JSON.stringify({ event: "transcription", source:"user", text: transcription }));
-          }
-        });
-
-        if (isFinal) {
-          clearTimeout(inactivityTimeout);
-          await processTranscription(transcription);
-        } else {
-          resetInactivityTimeout(transcription);
+        // Apply lexical enhancement post-processing to fix common confusions
+        const processedTranscription = applyLexicalEnhancementPostProcessing ? 
+          applyLexicalEnhancementPostProcessing(transcription, interactionSettings) : 
+          transcription;
+        
+        // Send transcription to room-specific clients only
+        if (ws.roomKey && agentRooms && agentRooms.has(ws.roomKey)) {
+          const room = agentRooms.get(ws.roomKey);
+          room.forEach((client) => {
+            if (client.readyState === WebSocket.OPEN && client !== ws) {
+              client.send(JSON.stringify({ event: "transcription", source:"user", text: processedTranscription }));
+            }
+          });
         }
+
+        clearTimeout(inactivityTimeout);
+        await processTranscription(processedTranscription);
       }
     })
     .on("error", (error) => {
@@ -86,16 +171,22 @@ function createGoogleSpeechRecognizeStream({
           timer, 
           ws, 
           wss, 
+          agentRooms,
           ignoreNewTranscriptions, 
           isProcessingTTS, 
           processTranscription, 
           resetInactivityTimeout, 
-          inactivityTimeout 
+          inactivityTimeout,
+          userInterrupted,
+          agentConfig,
+          applyLexicalEnhancementPostProcessing
         });
       }
     });
 
   return recognizeStream;
 }
+
+
 
 module.exports = createGoogleSpeechRecognizeStream;

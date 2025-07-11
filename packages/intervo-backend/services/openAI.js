@@ -6,8 +6,7 @@ class OpenAIService {
     // this.apiKey = process.env.DEEP_SEEK_API_KEY;
     this.apiKey = process.env.GROQ_API_KEY;
     // this.apiKey = process.env.CLOUDFLARE_AI_API_KEY;
-    // this.apiKey = "avian-n-Qg2F_4ogct8XOAvXwy-x6o0y-qLBPCX4KMLdEh4gA";
-    // this.apiKey = "csk-2cve5vpjhn9f85cddmpyk2v5vvkkdymcj82efj88cpwp8npj";
+  
     this.baseURL = "https://api.groq.com/openai/v1/chat/completions";
     // this.baseURL = "https://api.openai.com/v1/chat/completions";
     // this.baseURL = "https://api.deepseek.com/v1/chat/completions";

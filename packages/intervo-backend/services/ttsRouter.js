@@ -26,7 +26,7 @@ function getTTSService(ttsService) {
     }
     
     // Return a wrapped function that includes text preprocessing
-    return async function(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null) {
+    return async function(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null, userInterrupted = null) {
         // Preprocess text using the text preprocessor
         const result = preprocessTextForTTS(text);
         
@@ -37,12 +37,12 @@ function getTTSService(ttsService) {
         }
         
         // Call the original TTS function with processed text
-        return ttsFunction(result.text, ws, streamSid, voiceSettings, nearEndCallback, useChunks, callRecorder);
+        return ttsFunction(result.text, ws, streamSid, voiceSettings, nearEndCallback, useChunks, callRecorder, userInterrupted);
     };
 }
 
 // Wrapper function that preprocesses text before calling the TTS service
-async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null, ttsService = 'azure') {
+async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, useChunks = true, callRecorder = null, userInterrupted = null, ttsService = 'azure') {
     // Preprocess text using the text preprocessor
     const result = preprocessTextForTTS(text);
     
@@ -54,7 +54,7 @@ async function streamTTS(text, ws, streamSid, voiceSettings, nearEndCallback, us
     
     // Get the appropriate TTS service and call it with processed text
     const ttsFunction = getTTSService(ttsService);
-    return ttsFunction(result.text, ws, streamSid, voiceSettings, nearEndCallback, useChunks, callRecorder);
+    return ttsFunction(result.text, ws, streamSid, voiceSettings, nearEndCallback, useChunks, callRecorder, userInterrupted);
 }
 
 module.exports = { getTTSService, streamTTS }; 

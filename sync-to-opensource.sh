@@ -21,6 +21,7 @@ EXCLUDE_PATTERNS=(
     "packages/intervo-frontend/src/app/(admin)/admin/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/settings/"
     "packages/intervo-frontend/src/app/(workspace)/[workspaceid]/agent/(agent)/[slug]/playground/canvas/"
+    "html-pages/"
     "**/node_modules"
     "**/dist"
     "**/build"

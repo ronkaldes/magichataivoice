@@ -113,11 +113,20 @@ const agentSchema = new mongoose.Schema({
       default: false
     },
     lexicalEnhancement: {
-      terms: [String],
+      terms: [{
+        word: {
+          type: String,
+          trim: true,
+        },
+        pronunciation: {
+          type: String,
+          trim: true,
+        },
+      }],
       enabled: {
         type: Boolean,
-        default: false
-      }
+        default: false,
+      },
     },
     utteranceOptimization: {
       type: Boolean,
@@ -176,8 +185,17 @@ const agentSchema = new mongoose.Schema({
       data: {
         label: String,
         settings: {
-          type: mongoose.Schema.Types.Mixed
-          
+          type: mongoose.Schema.Types.Mixed,
+          tools: [{
+            toolId: {
+              type: String,
+              ref: 'Tool' // Reference to Tool model via toolId
+            },
+            name: String,
+            type: String,
+            serverUrl: String,
+            parameters: mongoose.Schema.Types.Mixed
+          }]
         }
       },
       className: String

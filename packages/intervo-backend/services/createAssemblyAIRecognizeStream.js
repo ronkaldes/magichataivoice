@@ -9,12 +9,16 @@ async function createAssemblyAIRecognizeStream({
   timer,
   ws, // The specific WebSocket connection for this call
   wss, // The WebSocket server instance (for broadcasting to UI clients)
+  agentRooms, // The agent rooms map for room-specific broadcasting
   ignoreNewTranscriptions, // Flag to ignore new transcriptions while processing
   isProcessingTTS, // Flag indicating TTS is currently active
   processTranscription, // Callback function from twilioHandler to process final transcription
   resetInactivityTimeout, // Callback function from twilioHandler to reset inactivity timer
   inactivityTimeout, // The current inactivity timeout ID
-  endPointingMs // New parameter for AssemblyAI silence threshold
+  endPointingMs, // New parameter for AssemblyAI silence threshold
+  userInterrupted,
+  agentConfig={},
+  applyLexicalEnhancementPostProcessing
 }) {
   if (!assembly_api_key) {
     console.error(`[${timer()}] AssemblyAI API Key not found. Please set ASSEMBLYAI_API_KEY environment variable.`);
@@ -33,10 +37,38 @@ async function createAssemblyAIRecognizeStream({
   // Wrap the connection and setup in a Promise
   return new Promise(async (resolve, reject) => {
     try {
+      // Build word boost for AssemblyAI
+      const wordBoost = [];
+      
+      // Add default words for boosting
+      wordBoost.push("CodeDesign", "Intervo");
+      
+      // Add lexical enhancement terms if available and enabled
+      if (agentConfig?.interactionSettings?.lexicalEnhancement?.enabled && 
+          agentConfig?.interactionSettings?.lexicalEnhancement?.terms?.length > 0) {
+        agentConfig.interactionSettings.lexicalEnhancement.terms.forEach(term => {
+          if (term.word) {
+            wordBoost.push(term.word);
+            // Also add pronunciation as a boost word if it's different from the word
+            if (term.pronunciation && term.pronunciation !== term.word) {
+              wordBoost.push(term.pronunciation);
+              
+              // Add common pronunciation variants
+              const pronunciation = term.pronunciation.toLowerCase();
+              if (pronunciation.includes('-')) {
+                wordBoost.push(pronunciation.replace(/-/g, ' '));
+                wordBoost.push(pronunciation.replace(/-/g, ''));
+              }
+            }
+          }
+        });
+      }
+
       transcriber = client.realtime.transcriber({
         sampleRate: SAMPLE_RATE,
         encoding: 'pcm_mulaw', // Ensure encoding matches Twilio's output
-        endUtteranceSilenceThreshold: endPointingMs !== undefined ? endPointingMs : 700 // Use passed value or default to 700ms
+        endUtteranceSilenceThreshold: endPointingMs !== undefined ? endPointingMs : 700, // Use passed value or default to 700ms
+        wordBoost: wordBoost.length > 0 ? wordBoost : undefined, // Add word boost if available
       });
 
       // --- Promise Resolution/Rejection Logic --- 
@@ -108,39 +140,47 @@ async function createAssemblyAIRecognizeStream({
 
         console.log(`[${timer()}] AssemblyAI Transcript (${transcript.message_type}): ${transcription}`);
 
-        // Broadcast transcription (partial and final) to UI clients (agent dashboard)
-        // wss.clients.forEach((client) => {
-        //   // Check if the client is the agent dashboard and not the Twilio connection itself
-        //   if (client.readyState === WebSocket.OPEN && client !== ws) {
-        //      // Assuming your UI differentiates based on 'source' or similar
-        //      client.send(JSON.stringify({ event: "transcription", source: "user", text: transcription }));
-        //   }
-        // });
-
+        // Handle interim results for interruption detection
+        if (!isFinal && transcription.trim()) {
+          // If this is an interim result and we're currently processing TTS, set interruption flag
+            console.log(`[${timer()}] User interruption detected during TTS: ${transcription}`);
+            if (userInterrupted) {
+              userInterrupted.value = true;
+            }
+            return; // Don't process interim results further
+          
+          
+          // Log partial transcript but don't process further
+          console.log(`[${timer()}] Ignoring partial transcript: "${transcription}"`);
+          return;
+        }
 
         if (isFinal) {
            console.log(`[${timer()}] AssemblyAI Final Transcript received: \"${transcription}\"`);
            
-           // --- Move broadcasting inside the isFinal block ---
-           wss.clients.forEach((client) => {
-             // Check if the client is the agent dashboard and not the Twilio connection itself
-             if (client.readyState === WebSocket.OPEN && client !== ws) {
-                // Assuming your UI differentiates based on 'source' or similar
-                client.send(JSON.stringify({ event: "transcription", source: "user", text: transcription }));
-             }
-           });
+           // Apply lexical enhancement post-processing to fix common confusions
+           const processedTranscription = applyLexicalEnhancementPostProcessing ? 
+             applyLexicalEnhancementPostProcessing(transcription, agentConfig?.interactionSettings) : 
+             transcription;
+           
+           // --- Broadcast to specific room only ---
+           if (ws.roomKey && agentRooms && agentRooms.has(ws.roomKey)) {
+             const room = agentRooms.get(ws.roomKey);
+             room.forEach((client) => {
+               if (client.readyState === WebSocket.OPEN && client !== ws) {
+                 client.send(JSON.stringify({ event: "transcription", source: "user", text: processedTranscription }));
+               }
+             });
+           }
            // -----------------------------------------------------
 
           clearTimeout(inactivityTimeout); // Clear any pending inactivity timeout
           // Call the main processing function from twilioHandler
-          await processTranscription(transcription);
+          await processTranscription(processedTranscription);
           // Note: AssemblyAI might send multiple 'FinalTranscript' for segments of an utterance.
           // The twilioHandler's logic should ideally handle potentially frequent final transcriptions.
           // Resetting inactivity timer here might be needed if we expect more speech shortly after a final segment.
           // resetInactivityTimeout(transcription); // <-- Remove this. Rely on endUtteranceSilenceThreshold.
-        } else {
-          // It's a partial transcript, DO NOTHING except potentially log
-          console.log(`[${timer()}] Ignoring partial transcript: "${transcription}"`);
         }
       });
 

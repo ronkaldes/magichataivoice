@@ -211,20 +211,16 @@ export function SiteHeader({ slug }) {
             <div className="hidden md:flex">
               {isAuthenticated &&
                 AgentNavItems.map((item) => {
-                  // For playground, use exact match to avoid matching /playground/canvas
-                  const targetPath = `/${workspaceId}/agent/${slug}${item.href}`;
-                  const isActive =
-                    item.href === "/playground"
-                      ? pathname === targetPath
-                      : pathname.startsWith(targetPath);
-
+                  const isActive = pathname.startsWith(
+                    `/${workspaceId}/agent/${slug}${item.href}`
+                  );
                   return (
                     <NavbarItem key={item.href}>
                       <Link
-                        href={targetPath}
+                        href={`/${workspaceId}/agent/${slug}${item.href}`}
                         className={`${navigationMenuTriggerStyle()} ${
                           isActive
-                            ? "relative after:absolute after:bottom-[-6px] after:left-2 after:right-2 after:h-0.5 after:bg-primary"
+                            ? "relative after:absolute after:bottom-0 after:left-2 after:right-2 after:h-0.5 after:bg-primary"
                             : ""
                         }`}
                       >
