@@ -1,12 +1,37 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { PlusIcon } from "lucide-react";
 import ContextMenu from "../components/ContextMenu";
 import { useReactFlow, useViewport } from "@xyflow/react";
 import { Position } from "@xyflow/react";
+
+const agentPrompts = {
+  "Greeting Agent":
+    "You are a welcoming greeting agent who initiates conversations with visitors. Your role is to provide a warm, professional welcome, briefly introduce the service, and identify how you can assist the visitor. Keep greetings concise but friendly, and quickly transition to understanding their needs.",
+  Receptionist:
+    "You are a professional receptionist who greets callers warmly and efficiently routes them to the right department. Handle inquiries with a friendly tone, gather necessary information, and provide basic company information. Always maintain a professional and helpful demeanor.",
+  "Sales Agent":
+    "You are a persuasive sales agent focused on understanding customer needs and presenting solutions. Ask qualifying questions, highlight product benefits, handle objections professionally, and guide prospects toward making informed purchasing decisions.",
+  "Technical Support Agent":
+    "You are a knowledgeable technical support specialist who helps customers resolve technical issues. Provide clear step-by-step troubleshooting guidance, ask diagnostic questions, and escalate complex issues when necessary. Always remain patient and helpful.",
+  "Lead Qualification Agent":
+    "You are a lead qualification specialist who identifies and evaluates potential customers. Ask strategic questions to determine budget, authority, need, and timeline. Score leads appropriately and route qualified prospects to the sales team.",
+  "Customer Support Agent":
+    "You are a dedicated customer support agent focused on resolving customer concerns and ensuring satisfaction. Listen actively to problems, provide solutions, process returns or refunds when appropriate, and maintain a positive customer relationship.",
+  "Farewell Agent":
+    "You are a farewell agent responsible for concluding conversations professionally. Summarize key points discussed, confirm next steps if any, express gratitude for the visitor's time, and provide clear instructions for future contact. Ensure the visitor feels satisfied with the interaction before ending.",
+  "Create with AI":
+    "Create a custom agent with AI assistance. Define your agent's role, personality, and specific capabilities based on your unique business needs. The AI will help you craft the perfect prompt for your use case.",
+};
 
 export const withAddButton = (WrappedNode) => {
   const WithAddButtonComponent = ({ data, id, ...props }) => {
@@ -72,6 +97,7 @@ export const withAddButton = (WrappedNode) => {
             label: nodeType,
             settings: {
               name: nodeType,
+              description: agentPrompts[nodeType] || "",
             },
           },
         };
@@ -149,6 +175,37 @@ export const withAddButton = (WrappedNode) => {
       setIsModalOpen(true);
     };
 
+    useLayoutEffect(() => {
+      if (isModalOpen && modalRef.current) {
+        const menuRect = modalRef.current.getBoundingClientRect();
+        setMenuPosition((prev) => {
+          let { x, y } = prev;
+
+          const buttonRect = buttonRef.current.getBoundingClientRect();
+
+          if (x + menuRect.width > window.innerWidth) {
+            x = buttonRect.left - menuRect.width - 10;
+          }
+          if (x < 0) {
+            x = 10;
+          }
+
+          if (y + menuRect.height > window.innerHeight) {
+            y = window.innerHeight - menuRect.height - 10;
+          }
+          if (y < 0) {
+            y = 10;
+          }
+
+          if (x === prev.x && y === prev.y) {
+            return prev;
+          }
+
+          return { x, y };
+        });
+      }
+    }, [isModalOpen]);
+
     useEffect(() => {
       if (!isModalOpen) return;
 
@@ -202,7 +259,10 @@ export const withAddButton = (WrappedNode) => {
                 }}
                 onClick={(e) => e.stopPropagation()}
               >
-                <ContextMenu onSelect={handleAddNode} />
+                <ContextMenu
+                  onSelect={handleAddNode}
+                  onClose={() => setIsModalOpen(false)}
+                />
               </div>,
               document.body
             )}

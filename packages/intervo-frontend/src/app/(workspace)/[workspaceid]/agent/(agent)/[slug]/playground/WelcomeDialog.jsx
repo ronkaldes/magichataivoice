@@ -24,6 +24,23 @@ import {
   DialogHeader as CustomDialogHeader,
 } from "@/components/ui/stepper";
 
+// Utility function to get cookie value
+const getCookie = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2)
+    return decodeURIComponent(parts.pop().split(";").shift());
+  return null;
+};
+
+// Utility function to delete cookie
+const deleteCookie = (name) => {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=; domain=.intervo.ai; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+};
+
 export default function WelcomeDialog({
   isOpen,
   onOpenChange,
@@ -45,6 +62,20 @@ export default function WelcomeDialog({
       setDescription(agentPrompt);
     }
   }, [agentPrompt]);
+
+  // Check for intervo_prompt cookie only for non-embedded version
+  useEffect(() => {
+    if (!embedded && isOpen) {
+      const promptCookie = getCookie("intervo_prompt");
+      if (promptCookie) {
+        const defaultText = agentPrompt;
+        const combinedText = `${promptCookie}\n\n---\n\n${defaultText}`;
+        setDescription(combinedText);
+        // Delete the cookie after reading it
+        deleteCookie("intervo_prompt");
+      }
+    }
+  }, [embedded, isOpen]);
 
   useEffect(() => {
     if (embedded && onPromptChange && description !== agentPrompt) {
@@ -174,7 +205,7 @@ export default function WelcomeDialog({
 
         <div className="relative border-[2px] rounded-md p-[2px] border-primary">
           <Textarea
-            className="w-full px-3 py-2.5 ring-1 ring-gray-200 rounded-md resize-none line-clamp-3"
+            className="w-full px-3 py-2.5 ring-1 ring-gray-200 rounded-md resize-none overflow-y-auto"
             rows={6}
             value={description}
             onChange={(e) => setDescription(e.target.value)}

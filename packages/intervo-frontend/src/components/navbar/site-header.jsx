@@ -14,6 +14,7 @@ import { mainNavItems } from "@/config/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { navigationMenuTriggerStyle } from "@/components/ui/navigation-menu";
 import { useWorkspace } from "@/context/WorkspaceContext";
+import { usePathname } from "next/navigation";
 import Dropdown from "./Dropdown";
 import { MobileNavContent } from "./MobileNavContent";
 
@@ -27,6 +28,7 @@ export function SiteHeader() {
     memberWorkspaces,
     handleWorkspaceChange,
   } = useWorkspace();
+  const pathname = usePathname();
 
   // Helper function to calculate days remaining
   const calculateDaysRemaining = (expiryDate) => {
@@ -162,16 +164,25 @@ export function SiteHeader() {
 
             {isAuthenticated && (
               <div className="hidden md:flex items-center gap-4">
-                {mainNavItems.map((item) => (
-                  <NavbarItem key={item.href}>
-                    <Link
-                      href={`/${workspaceId}${item.href}`}
-                      className={navigationMenuTriggerStyle()}
-                    >
-                      {item.title}
-                    </Link>
-                  </NavbarItem>
-                ))}
+                {mainNavItems.map((item) => {
+                  const isActive = pathname.startsWith(
+                    `/${workspaceId}${item.href}`
+                  );
+                  return (
+                    <NavbarItem key={item.href}>
+                      <Link
+                        href={`/${workspaceId}${item.href}`}
+                        className={`${navigationMenuTriggerStyle()} ${
+                          isActive
+                            ? "relative after:absolute after:bottom-[-6px] after:left-2 after:right-2 after:h-0.5 after:bg-primary"
+                            : ""
+                        }`}
+                      >
+                        {item.title}
+                      </Link>
+                    </NavbarItem>
+                  );
+                })}
               </div>
             )}
           </NavbarContent>
@@ -243,13 +254,36 @@ export function SiteHeader() {
                 )}
 
                 <NavbarItem className="hidden md:flex">
+                  <Link
+                    href="https://docs.intervo.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="font-medium text-sm"
+                  >
+                    Help
+                  </Link>
+                </NavbarItem>
+
+                <NavbarItem className="hidden md:flex">
                   <Dropdown />
                 </NavbarItem>
               </>
             ) : (
-              <NavbarItem className="hidden lg:flex">
-                <Link href="/login">Login</Link>
-              </NavbarItem>
+              <>
+                <NavbarItem className="hidden md:flex ">
+                  <Link
+                    className="font-medium text-sm"
+                    href="https://docs.intervo.ai"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Help
+                  </Link>
+                </NavbarItem>
+                <NavbarItem className="hidden lg:flex">
+                  <Link href="/login">Login</Link>
+                </NavbarItem>
+              </>
             )}
             <button
               type="button"

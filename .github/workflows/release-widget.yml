@@ -3,7 +3,10 @@ name: Release Widget
 on:
   push:
     branches:
-      - widget # Or your primary branch name
+      - main # Or your primary branch name
+    paths:
+      - "packages/intervo-widget/**"
+      - ".changeset/**"
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 

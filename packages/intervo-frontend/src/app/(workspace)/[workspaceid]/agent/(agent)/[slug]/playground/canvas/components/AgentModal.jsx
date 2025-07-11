@@ -127,11 +127,11 @@ const AgentModal = ({
       modal={false}
     >
       {isOpen && (
-        <div className="fixed top-16 left-0 right-0 bottom-0 backdrop-blur-sm z-40" />
+        <div className="fixed top-12 left-0 right-0 bottom-0 backdrop-blur-sm z-40" />
       )}
 
       <DialogContent
-        className="fixed top-20 !left-auto !right-6 flex flex-col gap-4 min-h-[calc(100vh-6rem)] w-[512px] overflow-y-auto bg-white z-50 shadow-lg border-l border-gray-300 transition-transform transform"
+        className="fixed top-14 !left-auto !right-6 flex flex-col gap-4 min-h-[calc(100vh-6rem)] w-[512px] overflow-y-auto bg-white z-50 shadow-lg border-l border-gray-300 transition-transform transform"
         style={{ transform: isOpen ? "translateX(0)" : "translateX(100%)" }}
       >
         <DialogHeader className="absolute top-0 right-0">
@@ -175,17 +175,17 @@ const AgentModal = ({
                     onChange={(e) =>
                       handleChange("description", e.target.value)
                     }
-                    className="text-xs resize-none min-h-[72px] rounded-md"
+                    className="text-xs min-h-[72px] rounded-md"
                     placeholder={
                       isAgentNode
                         ? "Prompt for the subagent"
                         : "Add a description"
                     }
                     rows={3}
-                    maxLength={200}
+                    maxLength={500}
                   />
                   <p className="text-xs text-muted-foreground">
-                    {formData.description.length}/200 characters
+                    {formData.description.length}/500 characters
                   </p>
                 </div>
               )}

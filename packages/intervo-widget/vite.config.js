@@ -24,7 +24,10 @@ function injectCss() {
         if (fileName.endsWith(".js")) {
           // Combine your Tailwind variables (adjust as needed) with the accumulated CSS.
           const tailwindVars = `
+@import url("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,100..900;1,100..900&display=swap");
+
 :host {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
   --background: 0 0% 100%;
   --foreground: 240 10% 3.9%;
   --card: 0 0% 100%;
@@ -50,6 +53,12 @@ function injectCss() {
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
   --radius: 0.5rem;
+}
+
+:host *, 
+:host *:before, 
+:host *:after {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif !important;
 }
 `;
           const combinedCSS = tailwindVars + cssContent;

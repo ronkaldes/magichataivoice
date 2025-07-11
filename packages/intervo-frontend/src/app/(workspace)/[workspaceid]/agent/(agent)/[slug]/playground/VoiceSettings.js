@@ -13,7 +13,7 @@ import { usePlayground } from "@/context/AgentContext";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
-import { Settings, Plus, X } from "lucide-react";
+import { Settings, Plus, X, Info } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -22,6 +22,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AIConfigForm() {
   const [isOpen, setIsOpen] = useState(false);
@@ -274,142 +280,205 @@ export default function AIConfigForm() {
   ];
 
   return (
-    <Card className="p-6 space-y-6 max-w-lg">
-      <div className="flex items-center gap-2 mb-6">
-        <Settings className="w-6 h-6" />
-        <span className="text-md font-semibold">Speech & Text</span>
-      </div>
-      <Separator />
-      {/* Speech to Text Selection */}
-      <div className="space-y-2">
-        <Label className="font-semibold">Speech to Text Service</Label>
-        <Select
-          value={formState?.sttSettings?.service}
-          onValueChange={(value) =>
-            handleSelectChange(value, "sttSettings.service")
-          }
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select STT service" />
-          </SelectTrigger>
-          <SelectContent>
-            {sttOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
+    <TooltipProvider>
+      <Card className="p-6 space-y-6 max-w-lg">
+        <div className="flex items-center gap-2 mb-6">
+          <Settings className="w-6 h-6" />
+          <span className="text-md font-semibold">Speech & Text</span>
+        </div>
+        <Separator />
+        {/* Speech to Text Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Label className="font-semibold">Speech to Text Service</Label>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>
+                  Choose the AI service that converts spoken words into text.
+                  Google Speech-to-Text offers the best accuracy for most use
+                  cases, while other services may be better for specific
+                  languages or domains.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <Select
+            value={formState?.sttSettings?.service}
+            onValueChange={(value) =>
+              handleSelectChange(value, "sttSettings.service")
+            }
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select STT service" />
+            </SelectTrigger>
+            <SelectContent>
+              {sttOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Agent Type Selection */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <Label className="font-semibold">Agent Type</Label>
+            <Tooltip>
+              <TooltipTrigger>
+                <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>
+                  Defines the primary role and behavior of your AI agent. Lead
+                  Qualification focuses on gathering prospect information, Sales
+                  Agent handles closing deals, and Customer Support manages
+                  service inquiries and troubleshooting.
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <Select value={agentType} onValueChange={handleAgentTypeChange}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="Select Agent Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="leadQualification">
+                Lead Qualification
               </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {/* Agent Type Selection */}
-      <div className="space-y-2">
-        <Label className="font-semibold">Agent Type</Label>
-        <Select value={agentType} onValueChange={handleAgentTypeChange}>
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select Agent Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="leadQualification">
-              Lead Qualification
-            </SelectItem>
-            <SelectItem value="salesAgent">Sales Agent</SelectItem>
-            <SelectItem value="customerSupport">
-              Customer Support Agent
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <div className="space-y-2 mt-4">
-          <Label className="font-semibold">Introduction</Label>
-          <Textarea
-            rows={4}
-            value={formState.introduction || ""}
-            onChange={handleIntroductionChange}
-            placeholder="Enter your introduction here..."
-          />
+              <SelectItem value="salesAgent">Sales Agent</SelectItem>
+              <SelectItem value="customerSupport">
+                Customer Support Agent
+              </SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      </div>
-
-      {/* Rules Section */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <Label className="font-semibold">Rules</Label>
-          <Dialog open={rulesDialogOpen} onOpenChange={setRulesDialogOpen}>
-            <DialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-8 w-8 p-0">
-                <Plus className="h-4 w-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-md">
-              <DialogHeader>
-                <DialogTitle>Manage Rules</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a new rule..."
-                    value={newRule}
-                    onChange={(e) => setNewRule(e.target.value)}
-                    onKeyPress={(e) => e.key === "Enter" && handleAddRule()}
-                  />
-                  <Button onClick={handleAddRule} size="sm">
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
-                  {rules.map((rule, index) => (
-                    <div
-                      key={index}
-                      className="flex items-start gap-2 p-2 bg-gray-50 rounded-md"
-                    >
-                      <span className="flex-1 text-sm">{rule}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 w-6 p-0 text-gray-500 hover:text-red-500"
-                        onClick={() => handleRemoveRule(index)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
-                    </div>
-                  ))}
-                  {rules.length === 0 && (
-                    <p className="text-sm text-gray-500 text-center py-4">
-                      No rules added yet
-                    </p>
-                  )}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
-
-        {/* Rules Preview */}
-        <div className="space-y-1">
-          {rules.slice(0, 2).map((rule, index) => (
-            <div
-              key={index}
-              className="text-sm text-gray-800 bg-gray-50 p-2 rounded-md"
-            >
-              {rule}
+        <div className="space-y-2">
+          <div className="space-y-2 mt-4">
+            <div className="flex items-center gap-2">
+              <Label className="font-semibold">Introduction</Label>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>
+                    The opening message your AI agent will use to greet callers
+                    and introduce itself. Keep it concise, friendly, and clearly
+                    state the agent&apos;s purpose to set proper expectations
+                    for the conversation.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
             </div>
-          ))}
-          {rules.length > 2 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-auto p-1 text-xs text-gray-500 hover:text-gray-700"
-              onClick={() => setRulesDialogOpen(true)}
-            >
-              +{rules.length - 2} more...
-            </Button>
-          )}
-          {rules.length === 0 && (
-            <p className="text-sm text-gray-400 italic">No rules added</p>
-          )}
+            <Textarea
+              rows={4}
+              value={formState.introduction || ""}
+              onChange={handleIntroductionChange}
+              placeholder="Enter your introduction here..."
+            />
+          </div>
         </div>
-      </div>
-    </Card>
+
+        {/* Rules Section */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Label className="font-semibold">Rules</Label>
+              <Tooltip>
+                <TooltipTrigger>
+                  <Info className="w-4 h-4 text-muted-foreground cursor-help" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>
+                    Specific instructions that guide your agent&apos;s behavior
+                    during conversations. Examples: &quot;Always ask for email
+                    before phone number&quot;, &quot;Don&apos;t discuss pricing
+                    until needs are qualified&quot;, or &quot;Transfer to human
+                    for technical issues&quot;.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Dialog open={rulesDialogOpen} onOpenChange={setRulesDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm" className="h-8 w-8 p-0">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Manage Rules</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Add a new rule..."
+                      value={newRule}
+                      onChange={(e) => setNewRule(e.target.value)}
+                      onKeyPress={(e) => e.key === "Enter" && handleAddRule()}
+                    />
+                    <Button onClick={handleAddRule} size="sm">
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    {rules.map((rule, index) => (
+                      <div
+                        key={index}
+                        className="flex items-start gap-2 p-2 bg-gray-50 rounded-md"
+                      >
+                        <span className="flex-1 text-sm">{rule}</span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 w-6 p-0 text-gray-500 hover:text-red-500"
+                          onClick={() => handleRemoveRule(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                    {rules.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">
+                        No rules added yet
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          {/* Rules Preview */}
+          <div className="space-y-1">
+            {rules.slice(0, 2).map((rule, index) => (
+              <div
+                key={index}
+                className="text-sm text-gray-800 bg-gray-50 p-2 rounded-md"
+              >
+                {rule}
+              </div>
+            ))}
+            {rules.length > 2 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-1 text-xs text-gray-500 hover:text-gray-700"
+                onClick={() => setRulesDialogOpen(true)}
+              >
+                +{rules.length - 2} more...
+              </Button>
+            )}
+            {rules.length === 0 && (
+              <p className="text-sm text-gray-400 italic">No rules added</p>
+            )}
+          </div>
+        </div>
+      </Card>
+    </TooltipProvider>
   );
 }

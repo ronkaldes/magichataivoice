@@ -2,11 +2,14 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import returnAPIUrl from "@/config/config";
 import { useRouter } from "next/navigation";
+import PricingPopup from "@/components/PricingPopup";
 
 const backendAPIUrl = returnAPIUrl();
 //const backendAPIUrl = "http://localhost:3003";
 
 const WorkspaceContext = createContext();
+
+export { WorkspaceContext };
 
 export function WorkspaceProvider({ children }) {
   const [workspaceInfo, setWorkspaceInfo] = useState({});
@@ -21,6 +24,9 @@ export function WorkspaceProvider({ children }) {
   const [availableTimezones, setAvailableTimezones] = useState([]);
   const [timezonesLoading, setTimezonesLoading] = useState(false);
   const [timezonesError, setTimezonesError] = useState(null);
+
+  // New state for pricing popup
+  const [isPricingPopupOpen, setIsPricingPopupOpen] = useState(false);
 
   useEffect(() => {
     fetchWorkspaceInfo();
@@ -965,6 +971,47 @@ export function WorkspaceProvider({ children }) {
   };
   // --- END: New function ---
 
+  // --- NEW: Pricing popup control functions ---
+  const showPricingPopup = () => {
+    setIsPricingPopupOpen(true);
+  };
+
+  const hidePricingPopup = () => {
+    setIsPricingPopupOpen(false);
+  };
+
+  const checkAndShowPricingPopup = () => {
+    // Don't show pricing popup if still loading subscription details
+    if (subscriptionLoading || !workspaceId) {
+      return false;
+    }
+
+    // Check if user has sufficient credits to proceed
+    const creditBalance =
+      subscriptionDetails?.creditInfo?.totalRemainingCredits || 0;
+    const planType = subscriptionDetails?.planType;
+    const isActive = subscriptionDetails?.isActive;
+
+    // Determine if user should see pricing popup based on credits and plan type
+    const shouldShowPricing =
+      // No credits available
+      creditBalance <= 0 &&
+      // Free plan with no credits
+      (planType === "free" ||
+        planType === "free_with_credits" ||
+        // No active subscription
+        !isActive ||
+        // Not on a paid plan (subscription or PAYG)
+        (planType !== "subscription" && planType !== "pay_as_you_go"));
+
+    if (shouldShowPricing) {
+      showPricingPopup();
+    }
+
+    return shouldShowPricing;
+  };
+  // --- END: Pricing popup functions ---
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -1007,9 +1054,15 @@ export function WorkspaceProvider({ children }) {
         timezonesLoading,
         timezonesError,
         fetchTimezones,
+        // Add pricing popup related values
+        isPricingPopupOpen,
+        showPricingPopup,
+        hidePricingPopup,
+        checkAndShowPricingPopup,
       }}
     >
       {children}
+      <PricingPopup isOpen={isPricingPopupOpen} onClose={hidePricingPopup} />
     </WorkspaceContext.Provider>
   );
 }

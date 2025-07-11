@@ -79,15 +79,17 @@ const IntentDialog = ({ isOpen, onClose, onSave, intent = null }) => {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">What should the agent do?</Label>
-              <Textarea
-                id="description"
-                value={formData.description}
+              <Label htmlFor="required_entities">Required Information</Label>
+              <Input
+                id="required_entities"
+                value={formData.required_entities}
                 onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
+                  setFormData({
+                    ...formData,
+                    required_entities: e.target.value,
+                  })
                 }
-                placeholder="Describe what information to collect or what action to take..."
-                rows={3}
+                placeholder="name, email, phone (comma separated)"
               />
             </div>
 
@@ -109,22 +111,6 @@ const IntentDialog = ({ isOpen, onClose, onSave, intent = null }) => {
 
               {showAdvanced && (
                 <div className="space-y-4 mt-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="required_entities">
-                      Required Information
-                    </Label>
-                    <Input
-                      id="required_entities"
-                      value={formData.required_entities}
-                      onChange={(e) =>
-                        setFormData({
-                          ...formData,
-                          required_entities: e.target.value,
-                        })
-                      }
-                      placeholder="name, email, phone (comma separated)"
-                    />
-                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="optional_entities">
                       Optional Information

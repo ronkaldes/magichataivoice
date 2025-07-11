@@ -57,8 +57,13 @@ export default function DataTable({ data, pagination, setPage, page }) {
         enableHiding: false,
       },
       {
-        accessorKey: "fullName",
+        id: "fullName",
         header: "Full Name",
+        cell: ({ row }) => {
+          const firstName = row.original.firstName || "";
+          const lastName = row.original.lastName || "";
+          return `${firstName} ${lastName}`.trim();
+        },
       },
       {
         accessorKey: "email",

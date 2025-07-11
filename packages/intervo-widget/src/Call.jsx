@@ -15,6 +15,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import PropTypes from "prop-types";
+import Timer from "./components/Timer";
 
 const backendAPIUrl = returnAPIUrl();
 
@@ -24,10 +25,8 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
   const [scriptLoadState, setScriptLoadState] = useState("pending");
   const [showTranscript, setShowTranscript] = useState(true);
   const [isFirstDeviceReady, setIsFirstDeviceReady] = useState(true);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [callHasEnded, setCallHasEnded] = useState(false);
   const [finalCallDuration, setFinalCallDuration] = useState("00:00");
-  const intervalRef = useRef(null);
   const transcriptRef = useRef(null); // Ref for auto-scrolling transcript
   const {
     callState,
@@ -47,9 +46,7 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
   const [typingMessageIndex, setTypingMessageIndex] = useState(-1);
   const [typedText, setTypedText] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const typingTimeoutRef = useRef(null);
-
-  console.log("contact in Call", contact);
+  const typingAnimationRef = useRef(null);
 
   // Auto-scroll transcript when new messages arrive
   useEffect(() => {
@@ -69,62 +66,68 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
 
   // Typing effect for agent messages
   useEffect(() => {
-    // Clear any existing timeout
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    // Find the last agent message that hasn't been fully typed yet
+    // Find the last agent message
     const lastAgentMessageIndex = messages.length - 1;
-
-    if (lastAgentMessageIndex >= 0) {
-      const lastMessage = messages[lastAgentMessageIndex];
-
-      // Only apply typing effect to agent messages (not user messages)
-      if (lastMessage.source && lastMessage.source.toLowerCase() !== "user") {
-        const messageText = lastMessage.text || "";
-
-        // If this is a new message or we're not currently typing this message
-        if (typingMessageIndex !== lastAgentMessageIndex) {
-          setTypingMessageIndex(lastAgentMessageIndex);
-          setTypedText("");
-          setIsTyping(true);
-        }
-
-        // If we're currently typing this message and haven't finished
-        if (
-          typingMessageIndex === lastAgentMessageIndex &&
-          typedText.length < messageText.length
-        ) {
-          const typeNextChar = () => {
-            setTypedText((prev) => {
-              const nextText = messageText.slice(0, prev.length + 1);
-
-              // If we've reached the end, stop typing
-              if (nextText.length >= messageText.length) {
-                setIsTyping(false);
-                return messageText;
-              }
-
-              // Continue typing
-              typingTimeoutRef.current = setTimeout(typeNextChar, 500); // 250ms per character (5x slower)
-              return nextText;
-            });
-          };
-
-          // Start typing with a small delay
-          typingTimeoutRef.current = setTimeout(typeNextChar, 100);
-        }
-      }
+    if (lastAgentMessageIndex < 0) {
+      return;
     }
 
-    // Cleanup function
+    const lastMessage = messages[lastAgentMessageIndex];
+    const isAgentMessage =
+      lastMessage.source && lastMessage.source.toLowerCase() !== "user";
+
+    // If the last message is not from the agent, ensure we stop any typing
+    if (!isAgentMessage) {
+      if (isTyping) {
+        setIsTyping(false);
+      }
+      return;
+    }
+
+    // --- Animation Logic ---
+
+    // Stop any previous animation frame
+    if (typingAnimationRef.current) {
+      cancelAnimationFrame(typingAnimationRef.current);
+    }
+
+    // If a new agent message has arrived, reset the animation state
+    if (typingMessageIndex !== lastAgentMessageIndex) {
+      setTypingMessageIndex(lastAgentMessageIndex);
+      setTypedText("");
+      setIsTyping(true); // This signals the start of a new animation
+      return; // Return early to wait for re-render with new state
+    }
+
+    // Continue the animation for the current message
+    if (isTyping) {
+      const messageText = lastMessage.text || "";
+      if (typedText.length >= messageText.length) {
+        setIsTyping(false); // Finished typing
+        return;
+      }
+
+      // Animation frame logic
+      const typeAnimation = () => {
+        // Ensure we are still typing the same message
+        if (typingMessageIndex === lastAgentMessageIndex) {
+          const currentMessage = messages[lastAgentMessageIndex];
+          const currentText = currentMessage ? currentMessage.text || "" : "";
+          setTypedText(currentText.slice(0, typedText.length + 1));
+        }
+      };
+
+      // Schedule the next frame
+      typingAnimationRef.current = setTimeout(typeAnimation, 50);
+    }
+
+    // Cleanup on unmount
     return () => {
-      if (typingTimeoutRef.current) {
-        clearTimeout(typingTimeoutRef.current);
+      if (typingAnimationRef.current) {
+        clearTimeout(typingAnimationRef.current);
       }
     };
-  }, [messages, typingMessageIndex, typedText]);
+  }, [messages, isTyping, typedText, typingMessageIndex]);
 
   // Function to get Twilio token from backend
   async function getToken() {
@@ -224,9 +227,7 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
 
         twilioDevice.on("disconnect", () => {
           if (mounted) {
-            // Save the final call duration
-            setFinalCallDuration(formatTime(elapsedSeconds));
-            // Mark call as ended so we show the summary
+            // Mark call as ended so we show the summary - final duration is tracked by Timer component
             setCallHasEnded(true);
             endCall();
             // Don't navigate back automatically - let user see the summary
@@ -259,8 +260,7 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
   // Use endCall from context
   function handleEndCall() {
     try {
-      // Save the final call duration and set call ended state directly
-      setFinalCallDuration(formatTime(elapsedSeconds));
+      // Set call ended state - final duration is already tracked by Timer component
       setCallHasEnded(true);
 
       // Also properly clean up the call
@@ -268,12 +268,6 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
         device.disconnectAll();
       }
       endCall();
-
-      // Stop the timer
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
     } catch (error) {
       console.error("Error ending call:", error);
       toast({
@@ -297,51 +291,15 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
 
   console.log(agentId, "agent state");
 
-  // --- Add useEffect for Timer --- START ---
-  useEffect(() => {
-    if (callState === "connected") {
-      // Start timer if connected and no interval is running
-      if (!intervalRef.current) {
-        setElapsedSeconds(0); // Reset timer on connect
-        intervalRef.current = setInterval(() => {
-          setElapsedSeconds((prevSeconds) => prevSeconds + 1);
-        }, 1000);
-        console.log("Timer started", intervalRef.current);
-      }
-    } else {
-      // Clear timer if not connected or call ended
-      if (intervalRef.current) {
-        console.log("Clearing timer", intervalRef.current);
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-      // Optional: Reset seconds when call goes idle, keep value on ringing/disconnect
-      if (callState === "idle" && !callHasEnded) {
-        setElapsedSeconds(0);
-      }
-    }
-
-    // Cleanup function to clear interval on component unmount
-    return () => {
-      if (intervalRef.current) {
-        console.log("Cleaning up timer", intervalRef.current);
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [callState]); // Rerun effect when callState changes
-  // --- Add useEffect for Timer --- END ---
-
-  // --- Add formatTime function --- START ---
-  const formatTime = (totalSeconds) => {
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(
-      2,
-      "0"
-    )}`;
+  // Handle timer duration updates for final call duration
+  const handleTimerDurationChange = (seconds) => {
+    const minutes = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    const formattedTime = `${String(minutes).padStart(2, "0")}:${String(
+      secs
+    ).padStart(2, "0")}`;
+    setFinalCallDuration(formattedTime);
   };
-  // --- Add formatTime function --- END ---
 
   useEffect(() => {
     console.log("callHasEnded", callHasEnded);
@@ -427,11 +385,11 @@ const Call = ({ onBack, agentId, hidePoweredBy }) => {
                 : "Ready to Call"
               : "Ready to Call"}
           </h2>
-          {callState !== "idle" && (
-            <h2 className="text-2xl leading-8 font-semibold text-[#F1F5F9] font-sans">
-              {formatTime(elapsedSeconds)}
-            </h2>
-          )}
+          <Timer
+            callState={callState}
+            onDurationChange={handleTimerDurationChange}
+            className="text-2xl leading-8 font-semibold text-[#F1F5F9] font-sans"
+          />
         </div>
         {callState === "connected" || callState === "ringing" ? (
           <Button

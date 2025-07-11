@@ -73,17 +73,6 @@ export function ActivitiesProvider({ children }) {
   const fetchData = async () => {
     setIsFetchingData(true);
     try {
-      // fetch contacts
-      let response = await fetch(`${backendAPIUrl}/contacts`, {
-        method: "GET",
-        credentials: "include",
-      });
-      if (!response.ok) {
-        throw new Error(`Response status: ${response.status}`);
-      }
-      const contacts = await response.json();
-      setContacts(contacts);
-
       // Reset activities pagination
       setPage(1);
       setHasMore(true);

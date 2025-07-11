@@ -19,6 +19,7 @@ const PricingCard = ({
   yearlyPrice,
   monthlyPriceId,
   yearlyPriceId,
+  buttonAboveFeatures = false,
 }) => {
   const [selectedInterval, setSelectedInterval] = useState(defaultInterval);
 
@@ -48,16 +49,16 @@ const PricingCard = ({
           : "border-[#E4E4E7]"
       } ${isDisabled ? "opacity-60 cursor-not-allowed" : ""}`}
     >
-      <div className="flex flex-col gap-6 justify-between text-black h-full">
-        <div className="space-y-3">
+      <div className="flex flex-col gap-6 justify-start text-black h-full">
+        <div className={type === "subscription" ? "space-y-3" : "space-y-1"}>
           <div className="font-sans font-medium">
             <h3 className="font-semibold text-3xl leading-9 tracking-tight">
               {headingText}
             </h3>
-            <div className="flex justify-between mt-1 items-center">
+            <div className="flex justify-between mt-1 items-center relative">
               <p className="text-[#52525B]">{subText}</p>
               {showRecommended && (
-                <p className="h-[28px] py-[2px] px-3 bg-[#0063E2] rounded-[32px] text-white text-xs sm:text-base">
+                <p className="absolute top-0 right-0 h-[28px] py-[2px] px-3 bg-[#0063E2] rounded-[32px] text-white text-xs sm:text-base">
                   Recommended
                 </p>
               )}
@@ -70,7 +71,10 @@ const PricingCard = ({
                 onValueChange={setSelectedInterval}
                 className="w-full sm:w-[312px]"
               >
-                <TabsList className="grid w-full grid-cols-2 h-10 text-foreground font-medium text-sm leading-5">
+                <TabsList
+                  className="grid w-full grid-cols-2 h-10 text-foreground font-medium text-sm leading-5"
+                  style={{ marginTop: "2px" }}
+                >
                   <TabsTrigger value="yearly" className="h-8 relative">
                     Yearly
                     <div className="absolute -top-3 bg-black left-10 sm:left-16 text-xs leading-4 font-semibold font-sans h-5 rounded-full py-0.5 px-2.5 text-primary-foreground">
@@ -112,7 +116,7 @@ const PricingCard = ({
               </Tabs>
             </div>
           ) : (
-            <div className="min-h-[90px] md:h-[114px] flex justify-end flex-col gap-2">
+            <div className="min-h-[90px] md:h-[114px] flex justify-end flex-col gap-2 w-full sm:w-[312px]">
               <p className="font-geist leading-6 text-[#52525B]">Starts with</p>
               <div className="space-x-1.5 flex items-end">
                 <h1 className="font-extrabold text-4xl sm:text-5xl leading-[40px] sm:leading-[48px] -tracking-[1.25px] font-sans">
@@ -126,6 +130,43 @@ const PricingCard = ({
           )}
         </div>
         {/*  */}
+        {buttonAboveFeatures && (
+          <div className="flex flex-col gap-2">
+            <Button
+              className="h-10 font-sans py-2 px-3 leading-6 font-medium"
+              onClick={
+                isDisabled
+                  ? undefined
+                  : () => {
+                      const price =
+                        selectedInterval === "yearly"
+                          ? yearlyPrice
+                          : monthlyPrice;
+                      const priceId =
+                        selectedInterval === "yearly"
+                          ? yearlyPriceId
+                          : monthlyPriceId;
+                      onClick(selectedInterval, price, priceId);
+                    }
+              }
+              disabled={isDisabled}
+            >
+              {/* If plan is active (subscribed), use text from parent ('View Details'). */}
+              {/* Otherwise (not subscribed), show dynamic select text based on interval. */}
+              {isActivePlan
+                ? buttonText
+                : type === "subscription"
+                ? selectedInterval === "yearly"
+                  ? "Select Yearly Plan"
+                  : "Select Monthly Plan"
+                : buttonText}
+            </Button>
+            <p className="text-sm leading-[21px] text-[#52525B] text-center">
+              {bottomText}
+            </p>
+          </div>
+        )}
+        {/*  */}
         <div className="flex flex-col gap-4">
           <p className="leading-6 font-geist text-[#52525B]">
             What&apos;s inside:
@@ -136,40 +177,42 @@ const PricingCard = ({
             ))}
         </div>
         {/*  */}
-        <div className="flex flex-col gap-2 h-full justify-end">
-          <Button
-            className="h-10 font-sans py-2 px-3 leading-6 font-medium"
-            onClick={
-              isDisabled
-                ? undefined
-                : () => {
-                    const price =
-                      selectedInterval === "yearly"
-                        ? yearlyPrice
-                        : monthlyPrice;
-                    const priceId =
-                      selectedInterval === "yearly"
-                        ? yearlyPriceId
-                        : monthlyPriceId;
-                    onClick(selectedInterval, price, priceId);
-                  }
-            }
-            disabled={isDisabled}
-          >
-            {/* If plan is active (subscribed), use text from parent ('View Details'). */}
-            {/* Otherwise (not subscribed), show dynamic select text based on interval. */}
-            {isActivePlan
-              ? buttonText
-              : type === "subscription"
-              ? selectedInterval === "yearly"
-                ? "Select Yearly Plan"
-                : "Select Monthly Plan"
-              : buttonText}
-          </Button>
-          <p className="text-sm leading-[21px] text-[#52525B] text-center">
-            {bottomText}
-          </p>
-        </div>
+        {!buttonAboveFeatures && (
+          <div className="flex flex-col gap-2 h-full justify-end">
+            <Button
+              className="h-10 font-sans py-2 px-3 leading-6 font-medium"
+              onClick={
+                isDisabled
+                  ? undefined
+                  : () => {
+                      const price =
+                        selectedInterval === "yearly"
+                          ? yearlyPrice
+                          : monthlyPrice;
+                      const priceId =
+                        selectedInterval === "yearly"
+                          ? yearlyPriceId
+                          : monthlyPriceId;
+                      onClick(selectedInterval, price, priceId);
+                    }
+              }
+              disabled={isDisabled}
+            >
+              {/* If plan is active (subscribed), use text from parent ('View Details'). */}
+              {/* Otherwise (not subscribed), show dynamic select text based on interval. */}
+              {isActivePlan
+                ? buttonText
+                : type === "subscription"
+                ? selectedInterval === "yearly"
+                  ? "Select Yearly Plan"
+                  : "Select Monthly Plan"
+                : buttonText}
+            </Button>
+            <p className="text-sm leading-[21px] text-[#52525B] text-center">
+              {bottomText}
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

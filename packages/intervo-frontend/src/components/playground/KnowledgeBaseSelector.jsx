@@ -18,6 +18,7 @@ const KnowledgeBaseSelector = ({
   knowledgeBases = [],
   selectedKnowledgeBase,
   onSelectKnowledgeBase,
+  shouldWiggle = false,
 }) => {
   const [isChunksViewerOpen, setIsChunksViewerOpen] = useState(false);
   const { isAdmin } = useAuth();
@@ -71,11 +72,12 @@ const KnowledgeBaseSelector = ({
 
           <div className="flex flex-col sm:flex-row gap-2">
             <Button
-              variant="secondary"
-              className="w-full flex justify-center items-center gap-1 px-3 py-2 rounded-md shadow"
+              className={`w-full bg-secondary hover:bg-secondary/90 text-secondary-foreground border border-primary flex justify-center items-center gap-1 px-3 py-2 rounded-md shadow transition-colors ${
+                shouldWiggle ? "animate-wiggle" : ""
+              }`}
               onClick={onManageSource}
             >
-              Manage Knowledge base
+              Add to Knowledge base
               {needsTraining && (
                 <LuAlertCircle className="h-4 w-4 text-amber-500 ml-1" />
               )}

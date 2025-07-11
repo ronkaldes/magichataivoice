@@ -9,15 +9,17 @@ import { SiteHeader } from "@/components/navbar/site-header";
 import { WorkspaceProvider } from "@/context/WorkspaceContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { usePathname } from "next/navigation";
+import { PostHogProvider } from "@/components/providers/PostHogProvider";
+import { PostHogProvider as PostHogTrackingProvider } from "@/context/PostHogContext";
 
 export default function RootLayout({ children }) {
   const pathname = usePathname();
   const isAgentRoute = pathname?.includes("/agent/");
 
   return (
-    <html lang="en">
-      <body>
-        <AuthProvider>
+    <PostHogProvider>
+      <AuthProvider>
+        <PostHogTrackingProvider>
           <ProtectedRoute>
             <WorkspaceProvider>
               <SourceProvider>
@@ -31,8 +33,8 @@ export default function RootLayout({ children }) {
               </SourceProvider>
             </WorkspaceProvider>
           </ProtectedRoute>
-        </AuthProvider>
-      </body>
-    </html>
+        </PostHogTrackingProvider>
+      </AuthProvider>
+    </PostHogProvider>
   );
 }

@@ -8,6 +8,7 @@ import {
   ChevronDownIcon, // For Switch Workspace visual cue
   Contact,
   CreditCard,
+  HelpCircle,
   LogOut,
   Phone,
   Plus,
@@ -42,14 +43,27 @@ export function MobileNavContent({
 }) {
   if (!isAuthenticated) {
     return (
-      <NavbarMenuItem key="mobile-login">
-        <Link
-          href="/login"
-          className="h-9 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
-        >
-          Login
-        </Link>
-      </NavbarMenuItem>
+      <>
+        <NavbarMenuItem key="mobile-help-unauthenticated">
+          <Link
+            href="https://docs.intervo.ai"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 h-9 w-full px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+          >
+            <HelpCircle className="h-5 w-5" />
+            Help
+          </Link>
+        </NavbarMenuItem>
+        <NavbarMenuItem key="mobile-login">
+          <Link
+            href="/login"
+            className="h-9 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground focus:outline-none"
+          >
+            Login
+          </Link>
+        </NavbarMenuItem>
+      </>
     );
   }
 
@@ -222,6 +236,18 @@ export function MobileNavContent({
           </div>
         </>
       )}
+
+      {/* Help Link */}
+      {renderLinkItem(
+        "https://docs.intervo.ai",
+        "Help",
+        <HelpCircle />,
+        "help"
+      )}
+
+      <div className="px-4">
+        <Divider className="my-2 h-px bg-neutral-200" />
+      </div>
 
       {/* Logout */}
       <NavbarMenuItem key="mobile-logout">

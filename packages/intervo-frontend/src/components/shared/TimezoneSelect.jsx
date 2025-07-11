@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import {
   Select,
   SelectContent,
@@ -7,7 +7,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useWorkspace } from "@/context/WorkspaceContext";
+import { WorkspaceContext } from "@/context/WorkspaceContext";
+import returnAPIUrl from "@/config/config";
+
+const backendAPIUrl = returnAPIUrl();
 
 export default function TimezoneSelect({
   value,
@@ -15,23 +18,61 @@ export default function TimezoneSelect({
   disabled,
   triggerClassName,
 }) {
-  const {
-    availableTimezones,
-    timezonesLoading,
-    timezonesError,
-    fetchTimezones,
-  } = useWorkspace();
+  // Try to get workspace context, but don't throw error if not available
+  const workspaceContext = useContext(WorkspaceContext);
+
+  // Local state for when workspace context is not available
+  const [localTimezones, setLocalTimezones] = useState([]);
+  const [localLoading, setLocalLoading] = useState(false);
+  const [localError, setLocalError] = useState(null);
+
+  // Use workspace context if available, otherwise use local state
+  const availableTimezones =
+    workspaceContext?.availableTimezones || localTimezones;
+  const timezonesLoading = workspaceContext?.timezonesLoading || localLoading;
+  const timezonesError = workspaceContext?.timezonesError || localError;
+
+  // Fetch timezones directly when not in workspace context
+  const fetchTimezonesDirectly = async () => {
+    if (localTimezones.length > 0) return; // Don't refetch if already loaded
+
+    setLocalLoading(true);
+    setLocalError(null);
+    try {
+      const response = await fetch(`${backendAPIUrl}/workspace/timezones`, {
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Failed to fetch timezones");
+      }
+      setLocalTimezones(data);
+    } catch (err) {
+      console.error("Error fetching timezones directly:", err);
+      setLocalError(err.message);
+      setLocalTimezones([]); // Clear timezones on error
+    } finally {
+      setLocalLoading(false);
+    }
+  };
 
   useEffect(() => {
-    // Fetch timezones if not already loaded or loading, or if there was an error
-    if (
-      !timezonesLoading &&
-      availableTimezones.length === 0 &&
-      !timezonesError
-    ) {
-      fetchTimezones();
+    if (workspaceContext) {
+      // Use workspace context method if available
+      if (
+        !workspaceContext.timezonesLoading &&
+        workspaceContext.availableTimezones.length === 0 &&
+        !workspaceContext.timezonesError
+      ) {
+        workspaceContext.fetchTimezones();
+      }
+    } else {
+      // Fetch directly when not in workspace context
+      if (!localLoading && localTimezones.length === 0 && !localError) {
+        fetchTimezonesDirectly();
+      }
     }
-  }, [availableTimezones, timezonesLoading, timezonesError, fetchTimezones]);
+  }, [workspaceContext, localTimezones, localLoading, localError]);
 
   return (
     <Select

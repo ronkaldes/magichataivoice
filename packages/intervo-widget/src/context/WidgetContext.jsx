@@ -589,30 +589,11 @@ const hash = crypto.createHmac('sha256', secret).update(userId).digest('hex');`,
         throw new Error("Failed to get WebSocket token");
       }
 
-      // 2. Prepare the call
-      const response = await fetch(`${backendAPIUrl}/stream/prepare`, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          aiConfig: JSON.stringify({
-            widgetId: state.widgetId,
-            source,
-            ...(source === "intervo.ai" && { agentId }),
-          }),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to prepare call");
-      }
-
-      const prepareData = await response.json();
+      // 2. Generate consistent conversationId for both connections
+      const conversationId = crypto.randomUUID();
       const updatedAiConfig = {
         ...state.aiConfig,
-        conversationId: prepareData.conversationId,
+        conversationId: conversationId,
         widgetId: state.widgetId,
         contactId: state.contact._id,
         source: source,

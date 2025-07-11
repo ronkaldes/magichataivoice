@@ -9,9 +9,20 @@ import CreateAgentModal from "@/components/studio/CreateAgentModal";
 import StudioSkeleton from "@/components/studio/StudioSkeleton";
 import { useWorkspace } from "@/context/WorkspaceContext";
 
-const Agents = ({ setItems, filtered, setIsSearching }) => {
+const Agents = ({
+  setItems,
+  filtered,
+  setIsSearching,
+  shouldOpenCreateModal,
+  setShouldOpenCreateModal,
+}) => {
   const { getAllAgents, deleteAgent } = usePlayground();
-  const { workspaceId } = useWorkspace();
+  const {
+    workspaceId,
+    checkAndShowPricingPopup,
+    workspaceLoading,
+    subscriptionLoading,
+  } = useWorkspace();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isCreateAgentModalOpen, setIsCreateAgentModalOpen] = useState(false);
@@ -31,6 +42,17 @@ const Agents = ({ setItems, filtered, setIsSearching }) => {
     fetchAgents();
   }, [getAllAgents, setItems, setIsSearching]);
 
+  // Handle shouldOpenCreateModal prop from parent
+  useEffect(() => {
+    if (shouldOpenCreateModal) {
+      setIsCreateAgentModalOpen(true);
+      // Reset the parent state
+      if (setShouldOpenCreateModal) {
+        setShouldOpenCreateModal(false);
+      }
+    }
+  }, [shouldOpenCreateModal, setShouldOpenCreateModal]);
+
   const handleEditInfo = (_id) => {
     router.push(`/${workspaceId}/agent/${_id}/playground`);
   };
@@ -39,6 +61,15 @@ const Agents = ({ setItems, filtered, setIsSearching }) => {
     const updatedArray = filtered.filter((_, i) => i !== index);
     setItems(updatedArray);
     deleteAgent(_id);
+  };
+
+  const handleCreateAgentClick = () => {
+    // Check if user has access, if not show pricing popup
+    const needsPricing = checkAndShowPricingPopup();
+    if (!needsPricing) {
+      // User has access, proceed to open the modal
+      setIsCreateAgentModalOpen(true);
+    }
   };
 
   return (
@@ -52,7 +83,18 @@ const Agents = ({ setItems, filtered, setIsSearching }) => {
             open={isCreateAgentModalOpen}
             onOpenChange={setIsCreateAgentModalOpen}
           >
-            <DialogTrigger className="py-1.5 px-2 flex items-center gap-1">
+            <DialogTrigger
+              className={`py-1.5 px-2 flex items-center gap-1 ${
+                workspaceLoading || subscriptionLoading
+                  ? "opacity-50 cursor-not-allowed text-gray-400"
+                  : "hover:bg-gray-100"
+              }`}
+              disabled={workspaceLoading || subscriptionLoading}
+              onClick={(e) => {
+                e.preventDefault(); // Prevent default dialog opening
+                handleCreateAgentClick();
+              }}
+            >
               {" "}
               <UserRoundPlus className="h-4 w-4" /> Create a New Agent
             </DialogTrigger>

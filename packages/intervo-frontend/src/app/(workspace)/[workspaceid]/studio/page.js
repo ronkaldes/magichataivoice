@@ -10,14 +10,34 @@ import { Search } from "lucide-react";
 import Fuse from "fuse.js";
 import { useSearchParams } from "next/navigation";
 
+// Utility function to get cookie value
+const getCookie = (name) => {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2)
+    return decodeURIComponent(parts.pop().split(";").shift());
+  return null;
+};
+
 const Page = () => {
   const [items, setItems] = useState([]);
   const [filtered, setFiltered] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [shouldOpenCreateModal, setShouldOpenCreateModal] = useState(false);
   const searchParams = useSearchParams();
   const [defaultSelected, setDefaultSelected] = useState(
     searchParams.get("page") || "agents"
   );
+
+  useEffect(() => {
+    // Check for intervo_prompt cookie on page load
+    const promptCookie = getCookie("intervo_prompt");
+    if (promptCookie) {
+      setShouldOpenCreateModal(true);
+      // Delete the cookie after reading it
+    }
+  }, []);
 
   const fuseOptions = {
     keys: ["name"],
@@ -68,6 +88,8 @@ const Page = () => {
               setItems={setItems}
               filtered={isSearching && filtered.length >= 0 ? filtered : items}
               setIsSearching={setIsSearching}
+              shouldOpenCreateModal={shouldOpenCreateModal}
+              setShouldOpenCreateModal={setShouldOpenCreateModal}
             />
           </TabsContent>
           <TabsContent value="knowledgebase">

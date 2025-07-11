@@ -1,262 +1,276 @@
-<p align="center">
-<a href="https://intervo.ai" target="_blank" style="display: inline-flex; align-items: center; text-decoration: none; color: #1f2937; font-family: sans-serif;">
-  <img 
-    src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-0e321543" 
-    alt="Intervo.ai Banner" 
-    style="width: 160px; margin-right: 12px;"
-  />
+# Intervo 🤖
 
-</a>
-</p>
+<!-- Add your banner image here -->
 
-<h1 align="center">Open-Source Conversational AI Platform</h1>
+![Intervo Banner](./assets/banner.png)
 
-<p align="center">
-  <strong>Build, deploy, and manage advanced, goal-oriented AI agents for both voice and chat.</strong>
-  <br />
-  <br />
-  <a href="https://intervo.ai"><strong>Website</strong></a> ·
-  <a href="https://docs.intervo.ai"><strong>Documentation</strong></a> ·
-  <a href="https://discord.gg/paFJtW8fkZ"><strong>Join our Discord Community</strong></a> ·
-  <a href="https://github.com/Intervo/Intervo/issues"><strong>Report a Bug</strong></a>
-</p>
+**Intervo** is an open-source AI voice agent platform that enables businesses to create intelligent phone-based conversational agents. Built with Twilio, LangChain, and modern web technologies, Intervo provides a complete solution for building, deploying, and managing AI-powered phone conversations.
 
----
+## ✨ Features
 
-**Intervo.ai** is an open-source platform for creating sophisticated AI-powered voice and chat agents. Move beyond simple Q&A bots and design complex, multi-step conversational workflows that can understand user intent, perform tasks, and integrate with your existing systems.
+- 📞 **AI Voice Agents** - Create intelligent agents that can make and receive phone calls
+- 🎙️ **Multi-Provider Speech Services** - Support for Google Speech-to-Text, Deepgram, AssemblyAI
+- 🗣️ **Advanced Text-to-Speech** - Integration with Google TTS, AWS Polly, Microsoft Speech
+- 🧠 **LangChain Integration** - Powered by OpenAI, Groq, Google Gemini, and other LLM providers
+- 📚 **Knowledge Base Support** - RAG (Retrieval Augmented Generation) with vector search using ChromaDB
+- 🎛️ **Visual Workflow Builder** - Drag-and-drop interface using React Flow for creating conversation flows
+- 📊 **Real-time Monitoring** - WebSocket-based real-time conversation tracking and transcription
+- 🔌 **Twilio Integration** - Native phone system integration for inbound/outbound calls
+- 🎨 **Embeddable Widget** - React-based widget for web integration
+- 💳 **Stripe Integration** - Built-in billing and subscription management
 
-This repository contains the full source code for the Intervo.ai platform, allowing you to self-host, customize, and extend its capabilities. Whether you're building a 24/7 customer support line, a proactive lead qualification agent, or an intelligent website assistant, Intervo.ai provides the tools to do it.
-
-Intervo.ai is proudly developed by the team at [**Codedesign.ai**](https://codedesign.ai).
-
-## ✨ Core Features
-
-- 📞 **Multimodal AI Agents**: Create intelligent agents that can seamlessly handle both real-time **voice calls** and text-based **web chat**.
-- 🎛️ **Advanced Workflow Canvas**: Visually design complex conversation flows using a node-based editor. Route users based on intent, and orchestrate a team of specialized "sub-agents" to handle different tasks (e.g., greetings, data collection, support).
-- 🧠 **Goal-Oriented Dialogues**: Define specific goals for your sub-agents (e.g., "collect user's email") and make them required, ensuring the agent completes its task before moving on.
-- 📚 **Powerful RAG Knowledge Base**: Train agents on your private data. Ingest content by uploading **files** (`pdf`, `docx`, `txt`), crawling **websites**, adding raw **text**, or creating structured **FAQs**. Powered by vector search with ChromaDB.
-- 🔌 **Native Telephony & API**: Deep integration with **Twilio** for inbound/outbound calls and a **REST API** to programmatically trigger outbound calls.
-- 🎙️ **Multi-Provider Speech Services**: Freedom to choose the best-in-class services, with support for Google Speech-to-Text, Deepgram, and AssemblyAI.
-- 🗣️ **Advanced Text-to-Speech**: Integrated with high-quality voices from Google TTS, AWS Polly, Microsoft Speech, and ElevenLabs.
-- 🔗 **Flexible LLM Integration**: Powered by LangChain, allowing you to connect to OpenAI, Groq, Google Gemini, Anthropic, and other LLM providers.
-- 🎨 **Embeddable Web Widget**: A customizable React-based widget for easy integration into any website.
-- 💳 **Stripe Integration**: Built-in billing and subscription management for commercial deployments.
-
-## 🚀 Quick Start (Docker)
-
-Get up and running in minutes using Docker.
+## 🚀 Quick Start
 
 ### Prerequisites
 
 - [Docker](https://docker.com) & Docker Compose
+- [Node.js](https://nodejs.org) 18+ (for development)
 - [Git](https://git-scm.com)
-- [FFmpeg](https://ffmpeg.org) (for audio processing)
 
 ### Installation
 
-1.  **Clone the Repository**
-    ```bash
-    git clone [https://github.com/Intervo/Intervo.git](https://github.com/Intervo/Intervo.git)
-    cd Intervo
-    ```
+1. **Clone the repository**
 
-2.  **Configure Environment Variables**
-    Before starting, you must create a `.env` file in the `packages/intervo-backend/` directory. You can copy the example file to get started:
-    ```bash
-    cp packages/intervo-backend/.env.example packages/intervo-backend/.env
-    ```
-    Now, edit `packages/intervo-backend/.env` and add your necessary API keys (at a minimum, you'll need `MONGO_URI` and `JWT_SECRET`). See the full Configuration section below for all options.
+   ```bash
+   git clone https://github.com/Intervo/Intervo.git
+   cd Intervo
+   ```
 
-3.  **Start with Docker Compose**
-    ```bash
-    # Start all services in the background
-    docker-compose up -d
+2. **Start with Docker**
 
-    # To view live logs from all services
-    docker-compose logs -f
-    ```
+   ```bash
+   # Start all services
+   docker-compose up -d
 
-4.  **Access the Application**
-    - **Frontend**: `http://localhost:3000`
-    - **Backend API**: `http://localhost:3001`
-    - **RAG API**: `http://localhost:4003`
+   # View logs
+   docker-compose logs -f
+   ```
 
----
+3. **Access the application**
+   - **Frontend**: http://localhost:3000
+   - **Backend API**: http://localhost:3001
+   - **RAG API**: http://localhost:4003
+   - **MongoDB**: localhost:27017
 
-## 🛠️ Local Development Setup (Without Docker)
+### Development Setup
 
-For more direct control during development.
+1. **Install dependencies**
 
-1.  **Install Dependencies**
-    ```bash
-    npm install --legacy-peer-deps
-    ```
+   ```bash
+   npm install --legacy-peer-deps
+   ```
 
-2.  **Setup Environment**
-    Create and fill out your `.env` file in `packages/intervo-backend/` as described in the Docker setup.
+2. **Start development servers**
 
-3.  **Start Development Servers**
-    ```bash
-    # Terminal 1: Start the backend
-    npm run dev --workspace=intervo-backend
+   ```bash
+   # Start backend
+   npm run dev --workspace=intervo-backend
 
-    # Terminal 2: Start the frontend
-    npm run dev --workspace=intervo-frontend
-    ```
-> Note: For this setup, you will need to run your own instance of MongoDB and configure the `MONGO_URI` accordingly.
+   # Start frontend (in another terminal)
+   npm run dev --workspace=intervo-frontend
 
----
+   # Build widget
+   npm run build --workspace=intervo-widget
+   ```
 
-## 🔧 Configuration (`packages/intervo-backend/.env`)
-
-Configure your services by setting these environment variables.
-
-```env
-# General
-MONGO_URI=mongodb://admin:password123@mongodb:27017/intervo?authSource=admin
-JWT_SECRET=your-super-secret-jwt-key-that-is-long
-
-# AI Providers (add keys for the ones you use)
-OPENAI_API_KEY=
-GROQ_API_KEY=
-GOOGLE_API_KEY=
-
-# Speech-to-Text Services
-DEEPGRAM_API_KEY=
-ASSEMBLYAI_API_KEY=
-# For Google STT, provide credentials via a JSON file
-# GOOGLE_APPLICATION_CREDENTIALS=path/to/google-credentials.json
-
-# Text-to-Speech Services
-AWS_ACCESS_KEY_ID=
-AWS_SECRET_ACCESS_KEY=
-AZURE_SPEECH_KEY=
-AZURE_SPEECH_REGION=
-
-# Twilio (required for all phone functionality)
-TWILIO_ACCOUNT_SID=
-TWILIO_AUTH_TOKEN=
-
-# Stripe (for billing features)
-STRIPE_SECRET_KEY=
-STRIPE_WEBHOOK_SECRET=
-
-# Object Storage (e.g., for call recordings)
-# Example using a Hetzner S3-compatible bucket
-HETZNER_STORAGE_ACCESS_KEY_ID=
-HETZNER_STORAGE_SECRET_ACCESS_KEY=
-HETZNER_STORAGE_ENDPOINT=
-HETZNER_STORAGE_BUCKET=
+## 📋 Project Structure
 
 ```
-## 🗺️ Roadmap
+intervo/
+├── packages/
+│   ├── intervo-frontend/    # Next.js frontend application
+│   ├── intervo-backend/     # Node.js/Express backend API
+│   └── intervo-widget/      # Embeddable chat widget
+├── docker-compose.yml       # Docker services configuration
+└── README.md
+```
 
-We have an ambitious vision for Intervo.ai. Here’s what we're focused on next:
+## 🔧 Configuration
 
-### Phase 1: Foundation & Stability (Current Focus)
-- [ ] **Comprehensive Documentation**: Creating detailed guides for every feature at [docs.intervo.ai](https://docs.intervo.ai).
-- [ ] **Simplified Setup**: Improving the Docker and local setup experience with better scripts and error handling.
-- [ ] **Test Coverage**: Increasing unit and integration test coverage across the backend and frontend.
+### Environment Variables
 
-### Phase 2: Agent & Communication Upgrade
-- [ ] **Agentic Tools & Functions**: Allowing agents in the workflow to use external APIs (e.g., check weather, book appointments, search databases).
-- [ ] **WebRTC Integration**: Introducing direct browser-to-browser voice calls via the web widget, reducing reliance on Twilio for web channels.
-- [ ] **Enhanced Webhook System**: Expanding the number of trigger events and providing richer data payloads for deeper integrations.
-- [ ] **Mobile SDKs (iOS/Android)**: Releasing native SDKs to embed Intervo.ai agents into mobile applications.
+Create `.env.local` files in the backend package:
 
-### Phase 3: Intelligence & Expansion
-- [ ] **Advanced Analytics Dashboard**: Providing deep insights into conversation funnels, intent recognition accuracy, and user engagement.
-- [ ] **Multi-language Support**: Full i18n for the dashboard and improved handling of multiple languages by agents.
-- [ ] **Plugin & Integration Marketplace**: Creating a formal architecture for community and third-party plugins.
+```bash
+# packages/intervo-backend/.env.local
+MONGO_URI=mongodb://admin:password123@mongodb:27017/intervo?authSource=admin
+JWT_SECRET=your-jwt-secret-here
 
-### Phase 4: Scale & Enterprise
-- [ ] **Kubernetes & Helm Charts**: Providing official support for production-ready, scalable deployments.
-- [ ] **Performance Optimization**: Deep-diving into response times and resource utilization for large-scale use.
-- [ ] **Enterprise-Grade Security**: Adding features like SSO, advanced role-based access control (RBAC), and audit logs.
+# AI Providers (choose your preferred providers)
+OPENAI_API_KEY=your-openai-api-key
+GROQ_API_KEY=your-groq-api-key
+GOOGLE_API_KEY=your-google-api-key
 
----
+# Speech Services
+GOOGLE_APPLICATION_CREDENTIALS=path/to/google-credentials.json
+DEEPGRAM_API_KEY=your-deepgram-key
+ASSEMBLYAI_API_KEY=your-assemblyai-key
+
+# Voice Services
+AWS_ACCESS_KEY_ID=your-aws-key
+AWS_SECRET_ACCESS_KEY=your-aws-secret
+AZURE_SPEECH_KEY=your-azure-key
+AZURE_SPEECH_REGION=your-azure-region
+
+# Twilio (required for phone calls)
+TWILIO_ACCOUNT_SID=your-twilio-sid
+TWILIO_AUTH_TOKEN=your-twilio-token
+
+# Stripe (for billing)
+STRIPE_SECRET_KEY=your-stripe-secret
+STRIPE_WEBHOOK_SECRET=your-stripe-webhook-secret
+
+# Storage (for call recordings)
+HETZNER_STORAGE_ACCESS_KEY_ID=your-storage-key
+HETZNER_STORAGE_SECRET_ACCESS_KEY=your-storage-secret
+HETZNER_STORAGE_ENDPOINT=your-storage-endpoint
+HETZNER_STORAGE_BUCKET=your-bucket-name
+```
+
+### Docker Configuration
+
+The included `docker-compose.yml` provides:
+
+- **MongoDB** database with persistent storage
+- **Frontend** development server
+- **Backend** API server
+- **RAG API** for AI processing
+
+## 📖 API Documentation
+
+### Authentication
+
+```bash
+POST /api/auth/login
+POST /api/auth/register
+```
+
+### Agents
+
+```bash
+GET    /api/agents          # List all agents
+POST   /api/agents          # Create new agent
+GET    /api/agents/:id      # Get agent details
+PUT    /api/agents/:id      # Update agent
+DELETE /api/agents/:id      # Delete agent
+```
+
+### Conversations
+
+```bash
+GET  /api/conversations     # List conversations
+POST /api/conversations     # Start new conversation
+GET  /api/conversations/:id # Get conversation history
+```
 
 ## 🤝 Contributing
 
-We welcome contributions of all kinds! Please see our [Contributing Guide](CONTRIBUTING.md) and our development process. We use a feature-branch workflow.
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
+
+### Development Workflow
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+### Code Style
+
+- Use ESLint and Prettier for code formatting
+- Follow conventional commit messages
+- Add tests for new features
+- Update documentation as needed
+
+## 🗺️ Roadmap
+
+### Phase 1: Foundation & Stability
+
+- [ ] **Improved Documentation** - Comprehensive guides and API docs
+- [ ] **Fix Docker Setup Issues** - Resolve compilation and container issues
+- [ ] **Enhanced Error Handling** - Better error messages and debugging
+- [ ] **Unit Testing Suite** - Comprehensive test coverage
+
+### Phase 2: Communication Upgrade
+
+- [ ] **WebRTC Integration** - Move from Twilio to native WebRTC
+- [ ] **Voice Quality Improvements** - Enhanced audio processing
+- [ ] **Mobile SDK** - Native mobile app integration
+- [ ] **Webhook System** - Event-driven integrations
+
+### Phase 3: Advanced Features
+
+- [ ] **Multi-language Support** - Internationalization (i18n)
+- [ ] **Advanced Analytics** - Custom dashboards and metrics
+- [ ] **Plugin Architecture** - Extensible third-party integrations
+- [ ] **AI Model Marketplace** - Custom model integration
+
+### Phase 4: Scale & Performance
+
+- [ ] **Kubernetes Support** - Production-ready orchestration
+- [ ] **CDN Integration** - Global content delivery
+- [ ] **Auto-scaling** - Dynamic resource management
+- [ ] **Performance Optimization** - Speed and efficiency improvements
 
 ## 👥 Core Contributors
 
-A huge thank you to the core team driving this project forward:
+We're grateful to these amazing people who have contributed to Intervo:
 
-<table style="border-collapse: collapse; width: 100%; max-width: 600px;">
+<table>
   <tr>
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-988fb5bb" width="60" height="60" alt="Manjunath M" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    <td align="center">
+      <img src="https://github.com/manjunathm.png" width="100px;" alt="Manjunath M"/><br />
+      <sub><b>Manjunath M</b></sub><br />
+      <small>Project Lead & Backend Architecture</small>
     </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Manjunath M</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Project Lead & Backend</span>
+    <td align="center">
+      <img src="https://github.com/hakhilnizeem.png" width="100px;" alt="Hakhil Nizeem"/><br />
+      <sub><b>Hakhil Nizeem</b></sub><br />
+      <small>Frontend Development & UI/UX</small>
     </td>
-  </tr>
-  
-  <tr style="background-color: #f8fafc;">
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-072139c4" width="60" height="60" alt="Hakhil Nizeem" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
-    </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Hakhil Nizeem</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Frontend & UI/UX</span>
+    <td align="center">
+      <img src="https://github.com/rahul.png" width="100px;" alt="Rahul"/><br />
+      <sub><b>Rahul</b></sub><br />
+      <small>AI/ML Integration & RAG System</small>
     </td>
   </tr>
-  
   <tr>
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-41eed53c" width="60" height="60" alt="Rahul" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
+    <td align="center">
+      <img src="https://github.com/vasanth.png" width="100px;" alt="Vasanth"/><br />
+      <sub><b>Vasanth</b></sub><br />
+      <small>DevOps & Infrastructure</small>
     </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Rahul</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Frontend Dev</span>
+    <td align="center">
+      <img src="https://github.com/geethusebastian.png" width="100px;" alt="Geethu Sebastian"/><br />
+      <sub><b>Geethu Sebastian</b></sub><br />
+      <small>Quality Assurance & Testing</small>
     </td>
-  </tr>
-  
-  <tr style="background-color: #f8fafc;">
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-79794555" width="60" height="60" alt="Vasanth" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
-    </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Amar</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Community</span>
-    </td>
-  </tr>
-  
-  <tr>
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-c00b4124" width="60" height="60" alt="Geethu Sebastian" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
-    </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Geethu Sebastian</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Backend Dev</span>
+    <td align="center">
+      <a href="https://github.com/Intervo/Intervo/graphs/contributors">
+        <img src="https://contrib.rocks/image?repo=Intervo/Intervo" width="100px;" alt="All Contributors"/><br />
+        <sub><b>All Contributors</b></sub>
+      </a>
     </td>
   </tr>
-  
-  <tr style="background-color: #f8fafc;">
-    <td style="padding: 16px; border: none;">
-      <img src="https://assets-v2.codedesign.ai/storage/v1/object/public/684ab08411e270f8a690637f_5f642ff0/asset-8c9aaec0" width="60" height="60" alt="Alex Chen" style="border-radius: 50%; border: 2px solid #e5e7eb;"/>
-    </td>
-    <td style="padding: 16px; border: none; vertical-align: middle;">
-      <strong style="font-size: 18px; color: #1f2937;">Vasanth</strong><br/>
-      <span style="color: #6b7280; font-size: 14px;">Frontend & Backend</span>
-    </td>
-  </tr>
-  
-
 </table>
-
-
-    
-  
-
 
 ## 📄 License
 
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🆘 Support
+
+- 📧 Email: support@intervo.ai
+- 💬 Discord: [Join our community](https://discord.gg/intervo)
+- 📖 Documentation: [docs.intervo.ai](https://docs.intervo.ai)
+- 🐛 Issues: [GitHub Issues](https://github.com/Intervo/Intervo/issues)
 
 ## 🌟 Star History
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Intervo/Intervo&type=Date)](https://star-history.com/#Intervo/Intervo&Date)
+
+---
+
+<p align="center">
+  Made with ❤️ by the Intervo team
+</p>

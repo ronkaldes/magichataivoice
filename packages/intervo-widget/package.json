@@ -1,12 +1,12 @@
 {
   "name": "intervo-widget",
   "private": false,
-  "version": "1.0.22",
+  "version": "1.0.31",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "clean": "rm -rf dist",
-    "build": "npm run clean && VITE_BUILD_FORMAT=umd vite build && VITE_BUILD_FORMAT=es vite build",
+    "build": "npm run clean && VITE_BUILD_FORMAT=umd VITE_API_URL_PRODUCTION=${VITE_API_URL_PRODUCTION:-https://api.intervo.ai} vite build --mode production && VITE_BUILD_FORMAT=es VITE_API_URL_PRODUCTION=${VITE_API_URL_PRODUCTION:-https://api.intervo.ai} vite build --mode production",
     "lint": "eslint .",
     "preview": "vite preview"
   },

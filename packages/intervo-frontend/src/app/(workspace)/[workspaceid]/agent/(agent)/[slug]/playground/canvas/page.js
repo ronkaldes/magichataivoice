@@ -13,6 +13,7 @@ import {
   Panel,
 } from "@xyflow/react";
 import { usePlayground } from "@/context/AgentContext";
+import { useWorkspace } from "@/context/WorkspaceContext";
 import { useParams } from "next/navigation";
 import { Position } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
@@ -21,6 +22,7 @@ import { initialNodes, nodeTypes } from "./nodes";
 import { initialEdges, edgeTypes } from "./edges";
 import AgentModal from "./components/AgentModal";
 import IntentClassifierModal from "./components/IntentClassifierModal";
+import CanvasHeader from "./components/CanvasHeader";
 
 export default function App() {
   const params = useParams();
@@ -32,14 +34,16 @@ export default function App() {
     isFetchingAgent,
     fetchTools,
   } = usePlayground();
+  const { checkAndShowPricingPopup } = useWorkspace();
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedNode, setSelectedNode] = useState(null);
   const [isIntentModalOpen, setIsIntentModalOpen] = useState(false);
   const toolsFetched = useRef(false);
+  const isLoadingFromConfig = useRef(false);
 
-  // Fetch agent config when component mounts
+  // Fetch agent config when component mounts or slug changes
   useEffect(() => {
     if (slug) {
       fetchAIConfig(slug);
@@ -49,12 +53,13 @@ export default function App() {
         toolsFetched.current = true;
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [slug, fetchAIConfig, fetchTools]);
 
   // Load flow data from agent config
   useEffect(() => {
     if (isFetchingAgent) return;
+
+    isLoadingFromConfig.current = true;
 
     if (aiConfig?.orchestrationFlow?.nodes?.length > 0) {
       setNodes(aiConfig.orchestrationFlow.nodes);
@@ -84,6 +89,10 @@ export default function App() {
       setNodes(initialNodes);
       setEdges(initialEdges);
     }
+
+    setTimeout(() => {
+      isLoadingFromConfig.current = false;
+    }, 100);
   }, [aiConfig, isFetchingAgent, setNodes, setEdges]);
 
   // Debounced save function to prevent too many API calls
@@ -107,6 +116,10 @@ export default function App() {
 
   // Save flow data when nodes or edges change
   useEffect(() => {
+    if (isLoadingFromConfig.current) {
+      return;
+    }
+
     if (aiConfig?._id) {
       // Remove duplicate edges before saving
       const uniqueEdges = edges.reduce((acc, edge) => {
@@ -246,13 +259,14 @@ export default function App() {
       if (node.id === "intent-classifier") {
         setIsIntentModalOpen(true);
       } else if (node.id === "placeholder") {
-        setIsModalOpen(false);
+        // Show pricing popup for placeholder node
+        checkAndShowPricingPopup();
       } else {
         console.log(node.id, "node.id");
         setIsModalOpen(true);
       }
     },
-    [setSelectedNode]
+    [setSelectedNode, checkAndShowPricingPopup]
   );
 
   const handleSaveAgent = useCallback(
@@ -334,81 +348,86 @@ export default function App() {
   console.log(edges, onEdgesChange, "edges");
 
   return (
-    <div style={{ width: "100%", height: "calc(100vh - 120px)" }}>
-      {isFetchingAgent ? (
-        <div className="flex items-center justify-center h-full">
-          Loading...
-        </div>
-      ) : (
-        <ReactFlow
-          nodes={nodes}
-          nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          edges={edges}
-          edgeTypes={edgeTypes}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
-          proOptions={{ hideAttribution: true }}
-        >
-          <Background />
-          <MiniMap />
-          <Controls />
-          <Panel
-            position={
-              selectedNode?.type === "classItem" ? "center-right" : "top-right"
-            }
+    <div className="w-full h-screen flex flex-col">
+      <CanvasHeader />
+      <div className="flex-1" style={{ height: "calc(100vh - 60px)" }}>
+        {isFetchingAgent ? (
+          <div className="flex items-center justify-center h-full">
+            Loading...
+          </div>
+        ) : (
+          <ReactFlow
+            nodes={nodes}
+            nodeTypes={nodeTypes}
+            onNodesChange={onNodesChange}
+            edges={edges}
+            edgeTypes={edgeTypes}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onNodeClick={onNodeClick}
+            defaultViewport={{ x: 0, y: 0, zoom: 0.75 }}
+            proOptions={{ hideAttribution: true }}
           >
-            <AgentModal
-              isOpen={isModalOpen}
-              onClose={() => setIsModalOpen(false)}
-              agentData={
-                selectedNode?.data?.settings || {
-                  id: selectedNode?.id,
-                  type: selectedNode?.type,
-                  ...selectedNode?.data,
-                  name: selectedNode?.data?.label || "",
-                  description: "",
-                  intents: [],
-                  responses: { default: "", variations: [] },
-                  knowledge_base: "",
-                  functions: [],
-                  policies: { tone: "friendly", language: "en-US" },
-                  llm: {
-                    provider: "openai",
-                    model: "",
-                    parameters: {},
-                  },
-                  active: true,
-                }
+            <Background />
+            <MiniMap />
+            <Controls />
+            <Panel
+              position={
+                selectedNode?.type === "classItem"
+                  ? "center-right"
+                  : "top-right"
               }
-              onSave={handleSaveAgent}
-              onDelete={handleDeleteNode}
-              selectedNode={selectedNode}
-            />
-            <IntentClassifierModal
-              isOpen={isIntentModalOpen}
-              onClose={() => setIsIntentModalOpen(false)}
-              classifierData={
-                selectedNode?.data?.settings || {
-                  name: selectedNode?.data?.label || "",
-                  description: "",
-                  intents: [],
-                  threshold: 0.7,
-                  model: {
-                    provider: "openai",
-                    name: "",
-                    parameters: {},
-                  },
-                  active: true,
+            >
+              <AgentModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                agentData={
+                  selectedNode?.data?.settings || {
+                    id: selectedNode?.id,
+                    type: selectedNode?.type,
+                    ...selectedNode?.data,
+                    name: selectedNode?.data?.label || "",
+                    description: "",
+                    intents: [],
+                    responses: { default: "", variations: [] },
+                    knowledge_base: "",
+                    functions: [],
+                    policies: { tone: "friendly", language: "en-US" },
+                    llm: {
+                      provider: "openai",
+                      model: "",
+                      parameters: {},
+                    },
+                    active: true,
+                  }
                 }
-              }
-              onSave={handleSaveIntentClassifier}
-            />
-          </Panel>
-        </ReactFlow>
-      )}
+                onSave={handleSaveAgent}
+                onDelete={handleDeleteNode}
+                selectedNode={selectedNode}
+              />
+              <IntentClassifierModal
+                isOpen={isIntentModalOpen}
+                onClose={() => setIsIntentModalOpen(false)}
+                classifierData={
+                  selectedNode?.data?.settings || {
+                    name: selectedNode?.data?.label || "",
+                    description: "",
+                    intents: [],
+                    threshold: 0.7,
+                    model: {
+                      provider: "openai",
+                      name: "",
+                      parameters: {},
+                    },
+                    active: true,
+                  }
+                }
+                onSave={handleSaveIntentClassifier}
+              />
+            </Panel>
+          </ReactFlow>
+        )}
+      </div>
     </div>
   );
 }

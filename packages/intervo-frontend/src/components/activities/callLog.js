@@ -114,7 +114,7 @@ const CallLog = ({ selectedActivity, isFetchingData }) => {
             <DropdownMenuContent className="mr-44 w-[224px]">
               {(() => {
                 console.log(selectedActivity, "selectedActivity");
-                const currentStatus = selectedActivity.ticketStatus;
+                const currentStatus = selectedActivity?.ticketStatus;
                 const activityId = selectedActivity?._id;
                 const items = [];
 

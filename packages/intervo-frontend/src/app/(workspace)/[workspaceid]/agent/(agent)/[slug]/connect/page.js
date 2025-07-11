@@ -41,7 +41,7 @@ const TabSkeleton = () => {
 };
 
 const Page = ({ params }) => {
-  const { slug } = React.use(params);
+  const { slug, workspaceid } = React.use(params);
   const router = useRouter();
 
   const [connectionInfo, setConnectionInfo] = useState({});
@@ -122,7 +122,7 @@ const Page = ({ params }) => {
                 </AlertDescription>
                 <div className="mt-3">
                   <a
-                    href={`/${params.workspaceid}/agent/${slug}/playground`}
+                    href={`/${workspaceid}/agent/${slug}/playground`}
                     className="text-primary hover:underline text-sm font-medium cursor-pointer"
                   >
                     Go to Playground →
@@ -139,7 +139,7 @@ const Page = ({ params }) => {
               <Deployment
                 data={connectionInfo}
                 aiConfig={aiConfig}
-                workspaceId={params.workspaceid}
+                workspaceId={workspaceid}
                 agentId={slug}
               />
             )}
